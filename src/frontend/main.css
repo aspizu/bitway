@@ -1,0 +1,40 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+.material-symbols {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-variation-settings: "FILL" var(--material-symbols-fill),
+        "wght" var(--material-symbols-weight),
+        "GRAD" var(--material-symbols-grade),
+        "opsz" var(--material-symbols-optical-size);
+}
+
+.material-symbols--sm {
+    font-size: 0.9rem;
+}
+
+.material-symbols--md {
+    font-size: 1rem;
+}
+
+.material-symbols--lg {
+    font-size: 1.5rem;
+}
+
+body.create-account-background {
+    --color: #eee;
+    background-size: 40px 40px;
+    background-image: linear-gradient(
+            to right,
+            var(--color) 1px,
+            transparent 1px
+        ),
+        linear-gradient(to bottom, var(--color) 1px, transparent 1px);
+}
+
+body.dark {
+    --color: #111;
+}
