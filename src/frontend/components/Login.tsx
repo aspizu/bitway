@@ -21,11 +21,11 @@ function LoginPopover({
 }: {
     titleProps: DOMAttributes<HTMLElement>
 }) {
-    const password = useFormInput(onLogin, passwordError)
-    const username = useFormInput(
-        () => password.ref.current?.focus(),
-        usernameError
-    )
+    const password = useFormInput({onEnter: onLogin, error: passwordError})
+    const username = useFormInput({
+        onEnter: () => password.ref.current?.focus(),
+        error: usernameError,
+    })
     const isVisible = useSignal(false)
     async function onLogin() {
         if (!(username.ref.current && password.ref.current)) return

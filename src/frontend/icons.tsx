@@ -16,11 +16,12 @@ export function Icon({
     opticalSize = 24,
     variant = "rounded",
     size = "md",
+    className,
     ...props
 }: IconProps) {
     return (
         <div
-            className={`material-symbols-${variant} material-symbols material-symbols--${size}`}
+            className={`material-symbols-${variant} material-symbols material-symbols--${size} ${className}`}
             style={{
                 ["--material-symbols-fill" as any]: fill ? "1" : "0",
                 ["--material-symbols-weight" as any]: weight,

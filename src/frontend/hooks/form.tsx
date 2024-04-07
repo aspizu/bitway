@@ -1,22 +1,68 @@
-import {useSignal} from "@preact/signals-react"
-import {useRef, type KeyboardEvent} from "react"
+import {Signal, useSignal} from "@preact/signals-react"
+import {
+    useRef,
+    type KeyboardEvent,
+    type MutableRefObject,
+    type RefObject,
+} from "react"
 
-export function useFormInput(
-    next: () => void,
-    error: (value: string) => string | undefined
-) {
-    const value = useSignal("")
+export interface FormInputOptions {
+    onEnter?: () => void
+    error?: (value: string) => string | null | undefined
+    default?: string
+    allowEmpty?: boolean
+    onDebounce?: () => void
+}
+
+export interface FormInput<T> {
+    value: Signal<string>
+    err: Signal<string>
+    ref: RefObject<T>
+    debounce: MutableRefObject<number | undefined>
+    validate(options?: {focus?: true; noCallback?: true}): boolean
+    inputProps: {
+        ref: RefObject<T>
+        value: string
+        isInvalid: boolean
+        errorMessage: string
+        onInput: () => void
+        onKeyUp: (ev: KeyboardEvent<HTMLInputElement>) => void
+    }
+}
+
+export function useFormInput<T extends HTMLInputElement>(
+    options?: FormInputOptions
+): FormInput<HTMLInputElement>
+export function useFormInput<T extends HTMLTextAreaElement>(
+    options?: FormInputOptions
+): FormInput<HTMLTextAreaElement>
+export function useFormInput<T extends HTMLInputElement | HTMLTextAreaElement>(
+    {
+        onEnter,
+        error,
+        default: default_,
+        allowEmpty,
+        onDebounce,
+    }: FormInputOptions = {
+        default: "",
+        allowEmpty: false,
+    }
+): FormInput<T> {
+    const value = useSignal(default_ ?? "")
     const err = useSignal<string>("")
-    const ref = useRef<HTMLInputElement>(null)
+    const ref = useRef<T>(null)
     const debounce = useRef<number | undefined>(undefined)
-    function validate(options?: {focus: true}) {
-        err.value = error(value.value) ?? ""
-        const isInvalid = !value.value.trim() || err.value
-        if (options?.focus) {
-            if (isInvalid) {
-                ref.current?.focus()
-            }
+    /** Return true if input was valid. */
+    function validate(options?: {focus?: true; noCallback?: true}) {
+        err.value = error?.(value.value) ?? ""
+        let isInvalid = Boolean(err.value)
+        if (!allowEmpty && value.value.trim() === "") {
+            isInvalid = true
         }
+        if (options?.focus && isInvalid) {
+            ref.current?.focus()
+        }
+        if (!options?.noCallback) onDebounce?.()
         return !isInvalid
     }
     return {
@@ -40,12 +86,10 @@ export function useFormInput(
                 if (ev.key === "Enter") {
                     ev.preventDefault()
                     if (validate({focus: true})) {
-                        next()
+                        onEnter?.()
                     }
                 }
             },
         },
     }
 }
-
-export type FormInput = ReturnType<typeof useFormInput>

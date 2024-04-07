@@ -62,4 +62,12 @@ def db() -> tuple[sqlite3.Connection, sqlite3.Cursor]:
     """
     con = sqlite3.connect(DATABASE)
     con.row_factory = Row
+    con.executescript(
+        """
+        PRAGMA foreign_keys = ON;
+        PRAGMA journal_mode = WAL;
+        PRAGMA synchronous = normal;
+        PRAGMA journal_size_limit = 6144000;
+        """
+    )
     return con, con.cursor()

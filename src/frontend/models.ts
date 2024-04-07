@@ -22,3 +22,9 @@ export function emailError(value: string) {
         return "Invalid email address."
     }
 }
+
+export function fieldError(value: string) {
+    if (value.length > 1024) {
+        return "This field cannot be longer than 1024 characters."
+    }
+}

@@ -25,9 +25,9 @@ function UsernamePassword({
     password,
     repeatPassword,
 }: {
-    username: FormInput
-    password: FormInput
-    repeatPassword: FormInput
+    username: FormInput<HTMLInputElement>
+    password: FormInput<HTMLInputElement>
+    repeatPassword: FormInput<HTMLInputElement>
 }) {
     return (
         <>
@@ -48,8 +48,8 @@ function AvatarNameEmail({
     email,
 }: {
     page: Signal<Page>
-    name: FormInput
-    email: FormInput
+    name: FormInput<HTMLInputElement>
+    email: FormInput<HTMLInputElement>
 }) {
     return (
         <>
@@ -92,28 +92,31 @@ export function CreateAccount() {
         }
     }, [])
     const page = useSignal<Page>(Page.USERNAME_PASSWORD)
-    const repeatPassword = useFormInput(nextPage, (value) => {
-        if (value !== password.value.value) {
-            return "Passwords do not match."
-        }
+    const repeatPassword = useFormInput({
+        onEnter: nextPage,
+        error: (value) => {
+            if (value !== password.value.value) {
+                return "Passwords do not match."
+            }
+        },
     })
-    const password = useFormInput(
-        () => repeatPassword.ref.current?.focus(),
-        passwordError
-    )
-    const username = useFormInput(
-        () => password.ref.current?.focus(),
-        usernameError
-    )
-    const email = useFormInput(onRegister, emailError)
-    const name = useFormInput(
-        () => email.ref.current?.focus(),
-        (value) => {
+    const password = useFormInput({
+        onEnter: () => repeatPassword.ref.current?.focus(),
+        error: passwordError,
+    })
+    const username = useFormInput({
+        onEnter: () => password.ref.current?.focus(),
+        error: usernameError,
+    })
+    const email = useFormInput({onEnter: onRegister, error: emailError})
+    const name = useFormInput({
+        onEnter: () => email.ref.current?.focus(),
+        error: (value) => {
             if (value.length > 64) {
                 return "Name cannot be longer than 64 characters."
             }
-        }
-    )
+        },
+    })
     function nextPage() {
         if (!username.validate({focus: true})) return
         if (!password.validate({focus: true})) return

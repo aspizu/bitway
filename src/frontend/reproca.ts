@@ -93,14 +93,17 @@ export class Service {
     }
 }
 
-const DEFAULT_MAX_RETRY_ATTEMPTS = 20
+const DEFAULT_MAX_RETRY_ATTEMPTS = 5
 
 export function useSignalMethod<T>(
     method: () => Promise<MethodResponse<T>>,
     options: {
         retryInterval?: number
         maxRetryAttempts?: number
-    } = {}
+        clearWhileFetching?: boolean
+    } = {
+        clearWhileFetching: true,
+    }
 ) {
     const response = useSignal<MethodResponse<T> | undefined>(undefined)
     const attempts = useRef(0)
@@ -114,37 +117,29 @@ export function useSignalMethod<T>(
             retryInterval.current = undefined
             return
         }
-        response.value = undefined
+        if (options.clearWhileFetching) {
+            response.value = undefined
+        }
         response.value = await method()
         if (response.value.err !== MethodError.NetworkError) {
             clearInterval(retryInterval.current)
             retryInterval.current = undefined
         }
     }
-    useSignalEffect(() => {
+    function fetch() {
         retry()
+        attempts.current = 0
+        clearInterval(retryInterval.current)
         if (options.retryInterval) {
-            attempts.current = 0
-            clearInterval(retryInterval.current)
             retryInterval.current = window.setInterval(
                 retry,
                 options.retryInterval
             )
             return () => clearInterval(retryInterval.current)
         }
-    })
-    return [
-        response,
-        () => {
-            attempts.current = 0
-            clearInterval(retryInterval.current)
-            retryInterval.current = window.setInterval(
-                retry,
-                options.retryInterval
-            )
-            retry()
-        },
-    ] as const
+    }
+    useSignalEffect(fetch)
+    return [response, fetch] as const
 }
 
 export function signalMethod<T>(
@@ -171,17 +166,18 @@ export function signalMethod<T>(
             retryInterval = undefined
         }
     }
-    let retryInterval: number | undefined = window.setInterval(
-        retry,
-        options.retryInterval
-    )
+    let retryInterval: number | undefined =
+        options.retryInterval &&
+        window.setInterval(retry, options.retryInterval)
     retry()
     return [
         response,
         () => {
             attempts = 0
             clearInterval(retryInterval)
-            retryInterval = window.setInterval(retry, options.retryInterval)
+            if (options.retryInterval) {
+                retryInterval = window.setInterval(retry, options.retryInterval)
+            }
             retry()
         },
     ] as const

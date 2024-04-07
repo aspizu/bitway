@@ -38,3 +38,13 @@ body.create-account-background {
 body.dark {
     --color: #111;
 }
+
+@layer components {
+    .main-page {
+        @apply flex flex-col p-4 mx-auto max-w-[1024px] h-full;
+    }
+}
+
+#app > div:nth-child(1) {
+    @apply flex flex-col min-h-[100dvh];
+}

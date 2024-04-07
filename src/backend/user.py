@@ -7,9 +7,10 @@ import re
 from reproca.response import Response  # noqa: TCH002
 
 from . import service, sessions
+from .blog import get_poll
 from .db import Row, db
 from .misc import seconds_since_1970
-from .models import Follower, User, UserSession
+from .models import Follower, FoundUser, User, UserBlog, UserHandle, UserSession
 from .password import (
     hash_password,
     is_password_matching,
@@ -61,7 +62,7 @@ async def login(response: Response, username: str, password: str) -> bool:
     con, cur = db()
     cur.execute(
         """
-        SELECT ID, Password, Name, Email, Avatar, Link, CreatedAt, LastSeenAt
+        SELECT ID, Password, Name, Email, Avatar, Link, Bio, CreatedAt, LastSeenAt
         FROM User
         WHERE Username = ?
         """,
@@ -86,6 +87,7 @@ async def login(response: Response, username: str, password: str) -> bool:
                 email=row.Email,
                 avatar=row.Avatar,
                 link=row.Link,
+                bio=row.Bio,
                 created_at=row.CreatedAt,
                 last_seen_at=row.LastSeenAt,
             ),
@@ -221,7 +223,7 @@ async def unfollow_user(session: UserSession, user_id: int) -> None:
 
 
 @service.method
-async def get_user(username: str) -> User | None:
+async def get_user(session: UserSession | None, username: str) -> User | None:
     """Get all information about user."""
     _, cur = db()
     cur.execute(
@@ -232,8 +234,8 @@ async def get_user(username: str) -> User | None:
         """,
         [username],
     )
-    row: Row | None = cur.fetchone()
-    if row is None:
+    user: Row | None = cur.fetchone()
+    if user is None:
         return None
     cur.execute(
         """
@@ -241,17 +243,17 @@ async def get_user(username: str) -> User | None:
         FROM User INNER JOIN UserFollower F
         WHERE Following = ? AND User.ID = Follower
         """,
-        [row.ID],
+        [user.ID],
     )
     followers = [
         Follower(
-            id=row.ID,
-            username=row.Username,
-            name=row.Name,
-            avatar=row.Avatar,
-            created_at=row.CreatedAt,
+            id=follower.ID,
+            username=follower.Username,
+            name=follower.Name,
+            avatar=follower.Avatar,
+            created_at=follower.CreatedAt,
         )
-        for row in cur.fetchall()
+        for follower in cur.fetchall()
     ]
     cur.execute(
         """
@@ -259,27 +261,100 @@ async def get_user(username: str) -> User | None:
         FROM User INNER JOIN UserFollower F
         WHERE Follower = ? AND User.ID = Following
         """,
-        [row.ID],
+        [user.ID],
     )
     following = [
         Follower(
+            id=follower.ID,
+            username=follower.Username,
+            name=follower.Name,
+            avatar=follower.Avatar,
+            created_at=follower.CreatedAt,
+        )
+        for follower in cur.fetchall()
+    ]
+    cur.execute(
+        "SELECT ID, Title, Content, IsPoll, CreatedAt FROM Blog WHERE Author = ?",
+        [user.ID],
+    )
+    blogs = [
+        UserBlog(
+            id=blog.ID,
+            title=blog.Title,
+            content=blog.Content,
+            created_at=blog.CreatedAt,
+            poll=get_poll(blog.ID, session, cur) if blog.IsPoll else None,
+        )
+        for blog in cur.fetchall()
+    ]
+    return User(
+        id=user.ID,
+        username=username,
+        name=user.Name,
+        email=user.Email,
+        avatar=user.Avatar,
+        link=user.Link,
+        bio=user.Bio,
+        created_at=user.CreatedAt,
+        last_seen_at=user.LastSeenAt,
+        followers=followers,
+        following=following,
+        blogs=blogs,
+    )
+
+
+@service.method
+async def get_users() -> list[UserHandle]:
+    """Get all users."""
+    _con, cur = db()
+    cur.execute(
+        """
+        SELECT
+            U.ID,
+            U.Username,
+            U.Name,
+            U.Avatar,
+            COUNT(DISTINCT Follower.ID) AS FollowerCount,
+            COUNT(DISTINCT Following.ID) AS FollowingCount
+        FROM
+            User U
+        LEFT JOIN
+            UserFollower UF1 ON U.ID = UF1.Following
+        LEFT JOIN
+            UserFollower UF2 ON U.ID = UF2.Follower
+        LEFT JOIN
+            User AS Follower ON UF1.Follower = Follower.ID
+        LEFT JOIN
+            User AS Following ON UF2.Following = Following.ID
+        GROUP BY
+            U.ID
+        ORDER BY
+            U.LastSeenAt DESC
+        """
+    )
+    return [
+        UserHandle(
             id=row.ID,
             username=row.Username,
             name=row.Name,
             avatar=row.Avatar,
-            created_at=row.CreatedAt,
+            follower_count=row.FollowerCount,
+            following_count=row.FollowingCount,
         )
         for row in cur.fetchall()
     ]
-    return User(
+
+
+@service.method
+async def find_user(username: str) -> FoundUser | None:
+    """Find user by username."""
+    _, cur = db()
+    cur.execute("SELECT ID, Name, Avatar FROM User WHERE Username = ?", [username])
+    row: Row | None = cur.fetchone()
+    if row is None:
+        return None
+    return FoundUser(
         id=row.ID,
-        username=username,
         name=row.Name,
-        email=row.Email,
         avatar=row.Avatar,
-        link=row.Link,
-        created_at=row.CreatedAt,
-        last_seen_at=row.LastSeenAt,
-        followers=followers,
-        following=following,
     )

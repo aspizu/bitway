@@ -30,7 +30,13 @@ sessions: Sessions[int, UserSession] = Sessions()
 service = Service(sessions, debug=DEBUG, code_generator=code_generator)
 
 
-from . import blog, user  # pyright: ignore[reportUnusedImport] # noqa: E402, F401
+def load(*modules: str) -> None:
+    """Load the modules."""
+    for module in modules:
+        __import__(__name__ + "." + module, globals(), locals())
+
+
+load("user", "blog", "startup")
 
 code_generator.resolve()
 code_generator.file.close()

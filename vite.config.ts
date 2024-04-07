@@ -25,12 +25,12 @@ export default defineConfig({
     build: {
         target: "esnext",
     },
-    server: {
-        proxy: {
-            "/proxy": {
-                target: import.meta.env["VITE_PROXY"],
-                rewrite: (path) => path.replace(/^\/proxy/, ""),
-            },
-        },
-    },
+    // server: {
+    //     proxy: {
+    //         "/proxy": {
+    //             target: import.meta.env["VITE_PROXY"],
+    //             rewrite: (path) => path.replace(/^\/proxy/, ""),
+    //         },
+    //     },
+    // },
 })

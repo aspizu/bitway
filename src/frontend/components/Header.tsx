@@ -10,7 +10,7 @@ import {UserDropdown} from "./UserDropdown"
 
 export function Header() {
     return (
-        <Navbar isBordered>
+        <Navbar isBordered position="sticky" height={"5rem"}>
             <NavbarContent>
                 <NavbarBrand>
                     <NavLink to="/">

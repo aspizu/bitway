@@ -4,8 +4,9 @@ version = "0.0.1"
 authors = [{ name = "aspizu", email = "aspizu@protonmail.com" }]
 dependencies = [
     "reproca @ file:///home/aspizu/Documents/Projects/reproca/reproca_server",
-    "python-telegram-bot>=21.0.1",
     "argon2-cffi>=23.1.0",
+    "rich>=13.7.1",
+    "whatwg-url>=2018.8.26",
 ]
 readme = "README.md"
 requires-python = ">= 3.8"
@@ -31,7 +32,7 @@ packages = ["src/backend"]
 
 [tool.ruff.lint]
 select            = ["ALL"]
-ignore            = ["CPY", 'COM']
+ignore            = ["CPY", 'COM', 'T201']
 preview           = true
 extend-safe-fixes = ["ALL"]
 fixable           = ["ALL"]

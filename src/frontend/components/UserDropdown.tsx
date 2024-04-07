@@ -23,7 +23,11 @@ export function UserDropdown() {
         <>
             <Dropdown>
                 <DropdownTrigger>
-                    <Avatar as="button" isBordered />
+                    <Avatar
+                        as="button"
+                        isBordered
+                        src={session.value?.avatar}
+                    />
                 </DropdownTrigger>
                 <DropdownMenu aria-label="User">
                     <DropdownItem
@@ -34,7 +38,22 @@ export function UserDropdown() {
                     >
                         Profile
                     </DropdownItem>
-                    <DropdownItem>Settings</DropdownItem>
+                    <DropdownItem
+                        onClick={() => {
+                            if (!session.value) return
+                            navigate("/create-post")
+                        }}
+                    >
+                        Create Post
+                    </DropdownItem>
+                    <DropdownItem
+                        onClick={() => {
+                            if (!session.value) return
+                            navigate("/create-startup")
+                        }}
+                    >
+                        Create Startup
+                    </DropdownItem>
                     <DropdownItem onClick={onOpen}>Logout</DropdownItem>
                 </DropdownMenu>
             </Dropdown>
@@ -54,6 +73,7 @@ export function UserDropdown() {
                                         toast.success(
                                             "Logged out successfully."
                                         )
+                                        onClose()
                                     }}
                                 >
                                     Log out
