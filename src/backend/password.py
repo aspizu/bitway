@@ -4,14 +4,6 @@ from __future__ import annotations
 
 import argon2
 
-MIN_PASSWORD_LENGTH = 8
-
-
-def is_password_ok(password: str) -> bool:
-    """Return true if password is valid."""
-    return len(password) >= MIN_PASSWORD_LENGTH
-
-
 argon2_hasher = argon2.PasswordHasher()
 
 

@@ -15,7 +15,7 @@ import {formatDistanceToNow} from "date-fns"
 import toast from "react-hot-toast"
 import * as api from "~/api"
 import {Icon} from "~/icons"
-import {readTime, s} from "~/misc"
+import {numberFormat, readTime} from "~/misc"
 import {session} from "~/session"
 import {UserHandle} from "./UserHandle"
 
@@ -105,7 +105,7 @@ export function Blog({
                             />
                         ))}
                         <p className="text-sm text-gray-400">
-                            total of {totalVotes} vote{s(totalVotes!)}
+                            {numberFormat(totalVotes!, "vote")}
                         </p>
                     </CardBody>
                 </>
@@ -157,22 +157,22 @@ function PollOption({
     if (totalVotes === 0) {
         totalVotes = 1
     }
-    const percent = (votes / totalVotes) * 100
+    const percent = Math.floor((votes / totalVotes) * 1000) / 10
     return (
         <div
             className={`
                 group hover:cursor-pointer relative items-center flex border-1
-                rounded-md p-[0.2rem]
+                rounded-small overflow-hidden
                 ${
                     isVoted
-                        ? "border-primary"
+                        ? "border-primary text-white"
                         : "border-content3 hover:border-content4 text-foreground-400 hover:text-foreground"
                 }`}
             onClick={onClick}
         >
             <div
                 className={`
-                    left-0 top-0 rounded-[0.2rem] h-[2rem]
+                    left-0 top-0 h-[2rem]
                     ${
                         isVoted
                             ? "bg-primary"
@@ -183,7 +183,11 @@ function PollOption({
                     width: `${percent}%`,
                 }}
             />
-            <p className="absolute pl-3 truncate w-[99]">{option}</p>
+
+            <p className="absolute pl-3 truncate w-[99] flex items-center gap-1">
+                {isVoted && <Icon className="">check</Icon>}
+                {option}
+            </p>
             <p className="absolute right-3 text-sm">{percent}%</p>
         </div>
     )

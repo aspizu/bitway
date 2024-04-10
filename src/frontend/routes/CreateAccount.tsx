@@ -13,7 +13,6 @@ import {Link, useNavigate} from "react-router-dom"
 import * as api from "~/api"
 import {useFormInput, type FormInput} from "~/hooks/form"
 import {Icon} from "~/icons"
-import {emailError, passwordError, usernameError} from "~/models"
 
 enum Page {
     USERNAME_PASSWORD,
@@ -102,20 +101,19 @@ export function CreateAccount() {
     })
     const password = useFormInput({
         onEnter: () => repeatPassword.ref.current?.focus(),
-        error: passwordError,
+        error: api.PASSWORD.getErrorMsg,
     })
     const username = useFormInput({
         onEnter: () => password.ref.current?.focus(),
-        error: usernameError,
+        error: api.USERNAME.getErrorMsg,
     })
-    const email = useFormInput({onEnter: onRegister, error: emailError})
+    const email = useFormInput({
+        onEnter: onRegister,
+        error: api.EMAIL.getErrorMsg,
+    })
     const name = useFormInput({
         onEnter: () => email.ref.current?.focus(),
-        error: (value) => {
-            if (value.length > 64) {
-                return "Name cannot be longer than 64 characters."
-            }
-        },
+        error: api.NAME.getErrorMsg,
     })
     function nextPage() {
         if (!username.validate({focus: true})) return
@@ -134,7 +132,10 @@ export function CreateAccount() {
             username.value.value,
             password.value.value,
             name.value.value,
-            email.value.value
+            email.value.value,
+            "",
+            "",
+            ""
         )
         if (response.ok) {
             toast.success("Account created successfully.")

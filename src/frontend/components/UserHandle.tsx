@@ -1,34 +1,27 @@
 import {Avatar, Link as LinkUI} from "@nextui-org/react"
 import {Link} from "react-router-dom"
-import {s} from "~/misc"
+import {numberFormat} from "~/misc"
 
 export function UserHandle({
     avatar,
     name,
     username,
     followerCount,
-    followingCount,
 }: {
     avatar: string
     name: string
     username: string
     followerCount?: number
-    followingCount?: number
 }) {
     return (
-        <div className="flex gap-2 items-center">
+        <div className="flex gap-2 items-center flex-shrink-0">
             <Avatar src={avatar} />
             <div className="flex flex-col">
                 <p className="flex items-center">
                     {name}
                     {!!followerCount && (
                         <span className="text-sm text-gray-400">
-                            🞄{followerCount} follower{s(followerCount)}
-                        </span>
-                    )}
-                    {!!followingCount && (
-                        <span className="text-sm text-gray-400">
-                            🞄{followingCount} following
+                            🞄{numberFormat(followerCount, "follower")}
                         </span>
                     )}
                 </p>

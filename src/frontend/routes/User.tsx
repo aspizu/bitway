@@ -3,7 +3,10 @@ import {
     Button,
     Card,
     CardBody,
+    CardHeader,
     Chip,
+    Divider,
+    Image,
     Input,
     Link as LinkUI,
     Modal,
@@ -11,9 +14,11 @@ import {
     ModalContent,
     ModalFooter,
     ModalHeader,
+    Tab,
+    Tabs,
     useDisclosure,
 } from "@nextui-org/react"
-import {formatDistance} from "date-fns/fp"
+import {formatDate, formatDistanceToNow} from "date-fns"
 import toast from "react-hot-toast"
 import {Link, useParams} from "react-router-dom"
 import * as api from "~/api"
@@ -21,9 +26,12 @@ import {Blog} from "~/components/Blog"
 import {NotFound} from "~/components/NotFound"
 import {UserHandle} from "~/components/UserHandle"
 import {useFormInput} from "~/hooks/form"
+import {Icon} from "~/icons"
+import {numberFormat} from "~/misc"
 import {emailError, fieldError} from "~/models"
 import {useSignalMethod} from "~/reproca"
 import {session} from "~/session"
+import {MutualFollowers} from "./MutualFollowers"
 
 function EditProfile({
     onClose,
@@ -122,78 +130,69 @@ export function User() {
             </main>
         )
     if (!user.value?.ok) return null
-    const isFollowing =
-        session.value &&
-        user.value.ok.followers.find(
-            (follower) => follower.id === session.value!.id
-        )
+    const is_following = user.value.ok.followers.is_following
     return (
-        <main className="main-page gap-4">
-            <Card>
-                <CardBody className="md:flex-row items-center justify-evenly md:items-start p-8 gap-4">
-                    <div className="flex flex-col gap-6 items-center md:max-w-[40%]">
-                        <div className="flex gap-8">
-                            <Avatar
-                                isBordered
-                                size="lg"
-                                className="scale-[2] m-6"
-                                src={user.value.ok.avatar}
-                            />
-                            <div className="flex flex-col justify-center">
-                                <LinkUI as="p" size="sm">
-                                    <Link
-                                        to={`/user/${user.value.ok.username}`}
-                                    >
-                                        @{user.value.ok.username}
-                                    </Link>
-                                </LinkUI>
-                                <p className="font-bold text-2xl">
-                                    {user.value.ok.name}
-                                </p>
-                                <p className="text-gray-500 text-sm">
-                                    {user.value.ok.email}
-                                </p>
-                                {user.value.ok.link && (
-                                    <Chip
-                                        size="sm"
-                                        as={LinkUI}
-                                        href={user.value.ok.link}
-                                        className="mt-2"
-                                    >
-                                        <span className="flex max-w-[10rem] truncate">
-                                            {user.value.ok.link}
-                                        </span>
-                                    </Chip>
-                                )}
-                            </div>
-                        </div>
-                        {user.value.ok.bio && (
-                            <p className="text-pretty">{user.value.ok.bio}</p>
-                        )}
-                        <div className="flex gap-4 text-sm text-gray-400 text-center">
-                            <p>
-                                Joined{" "}
-                                {formatDistance(
-                                    new Date(),
-                                    new Date(user.value.ok.created_at * 1000)
-                                )}{" "}
-                                ago
+        <main className="main-page lg:flex-row gap-4 lg:items-start">
+            <Card className="flex-shrink-0 lg:max-w-[25rem]">
+                <CardBody className="items-center gap-4 pt-8 pb-5">
+                    <div className="flex pl-4 pb-3 gap-8">
+                        <Avatar
+                            isBordered
+                            size="lg"
+                            className="scale-[2] m-6"
+                            src={user.value.ok.avatar}
+                        />
+                        <div className="flex flex-col justify-center">
+                            <LinkUI as="p" size="sm">
+                                <Link to={`/user/${user.value.ok.username}`}>
+                                    @{user.value.ok.username}
+                                </Link>
+                            </LinkUI>
+                            <p className="font-bold text-2xl">
+                                {user.value.ok.name}
                             </p>
-                            <p>
-                                Last seen{" "}
-                                {formatDistance(
-                                    new Date(),
-                                    new Date(user.value.ok.last_seen_at * 1000)
-                                )}{" "}
-                                ago
+                            <p className="text-gray-500 text-sm">
+                                {user.value.ok.email}
                             </p>
+                            {user.value.ok.link && (
+                                <Chip
+                                    size="sm"
+                                    as={LinkUI}
+                                    href={user.value.ok.link}
+                                    className="mt-1"
+                                >
+                                    <span className="flex max-w-[10rem] truncate">
+                                        {user.value.ok.link}
+                                    </span>
+                                </Chip>
+                            )}
                         </div>
-                        <div className="flex justify-stretch gap-3">
-                            {session.value && (
+                    </div>
+                    {user.value.ok.bio && (
+                        <p className="text-pretty">{user.value.ok.bio}</p>
+                    )}
+                    <p className="text-sm text-gray-400">
+                        {numberFormat(
+                            user.value.ok.followers.follower_count,
+                            "follower"
+                        )}{" "}
+                        🞄 Joined{" "}
+                        {formatDistanceToNow(user.value.ok.created_at * 1000)}{" "}
+                        ago 🞄 Last seen{" "}
+                        {formatDistanceToNow(user.value.ok.last_seen_at * 1000)}{" "}
+                        ago
+                    </p>
+                    <MutualFollowers followers={user.value.ok.followers} />
+                    <div className="flex">
+                        {session.value &&
+                            session.value.username !==
+                                user.value.ok.username && (
                                 <Button
-                                    color={isFollowing ? "default" : "primary"}
+                                    className="w-[15ch] lg:w-full"
+                                    radius="full"
+                                    color={is_following ? "default" : "primary"}
                                     onClick={async () => {
-                                        if (isFollowing) {
+                                        if (is_following) {
                                             await api.unfollow_user(
                                                 user.value?.ok?.id!
                                             )
@@ -211,51 +210,60 @@ export function User() {
                                         fetchUser()
                                     }}
                                 >
-                                    {isFollowing ? "Unfollow" : "Follow"}
+                                    {is_following ? "Unfollow" : "Follow"}
                                 </Button>
                             )}
-                            {session.value?.username ===
-                                user.value.ok.username && (
-                                <Button onClick={onOpen}>Edit Profile</Button>
-                            )}
-                        </div>
-                    </div>
-                    <div className="flex flex-col gap-4">
-                        <p className="font-bold">
-                            Followers ({user.value.ok.followers.length})
-                        </p>
-                        {user.value.ok.followers.map((follower) => (
-                            <UserHandle key={follower.id} {...follower} />
-                        ))}
-                    </div>
-                    <div className="flex flex-col gap-4">
-                        <p className="font-bold">
-                            Following ({user.value.ok.following.length})
-                        </p>
-                        {user.value.ok.following.map((follower) => (
-                            <UserHandle key={follower.id} {...follower} />
-                        ))}
+                        {session.value?.username === user.value.ok.username && (
+                            <Button size="sm" onClick={onOpen}>
+                                <Icon>edit</Icon>
+                                Edit Profile
+                            </Button>
+                        )}
                     </div>
                 </CardBody>
             </Card>
-            {user.value.ok.blogs.map((blog) => {
-                const author = user.value?.ok!
-                return (
-                    <Blog
-                        key={blog.id}
-                        userId={author.id}
-                        avatar={author.avatar}
-                        username={author.username}
-                        name={author.name}
-                        blogId={blog.id}
-                        title={blog.title}
-                        content={blog.content}
-                        createdAt={blog.created_at}
-                        poll={blog.poll ?? undefined}
-                        onDelete={fetchUser}
-                    />
-                )
-            })}
+            <div className="flex flex-col w-full">
+                <Tabs
+                    variant="underlined"
+                    className="justify-center lg:justify-normal"
+                >
+                    <Tab key="blogs" title="Blogs">
+                        <div className="flex flex-col gap-4">
+                            {user.value.ok.blogs.map((blog) => {
+                                const author = user.value?.ok!
+                                return (
+                                    <Blog
+                                        key={blog.id}
+                                        userId={author.id}
+                                        avatar={author.avatar}
+                                        username={author.username}
+                                        name={author.name}
+                                        blogId={blog.id}
+                                        title={blog.title}
+                                        content={blog.content}
+                                        createdAt={blog.created_at}
+                                        poll={blog.poll ?? undefined}
+                                        onDelete={fetchUser}
+                                    />
+                                )
+                            })}
+                        </div>
+                    </Tab>
+                    <Tab key="startups" title="Startups">
+                        <div className="flex flex-col gap-4">
+                            {user.value.ok.startups.map((startup) => (
+                                <UserStartup
+                                    key={startup.id}
+                                    avatar={user.value!.ok!.avatar}
+                                    name={user.value!.ok!.name}
+                                    username={user.value!.ok!.username}
+                                    startup={startup}
+                                />
+                            ))}
+                        </div>
+                    </Tab>
+                </Tabs>
+            </div>
             <Modal isOpen={isOpen} onClose={onClose}>
                 <ModalContent>
                     {(onClose) => (
@@ -264,5 +272,40 @@ export function User() {
                 </ModalContent>
             </Modal>
         </main>
+    )
+}
+
+function UserStartup({
+    avatar,
+    name,
+    username,
+    startup,
+}: {
+    avatar: string
+    name: string
+    username: string
+
+    startup: api.UserStartup
+}) {
+    return (
+        <Card>
+            <CardHeader className="flex-col items-start gap-4">
+                <UserHandle avatar={avatar} name={name} username={username} />
+                <p className="text-pretty">{startup.keynote}</p>
+            </CardHeader>
+            <Divider />
+            <CardBody className="gap-2">
+                <Image src={startup.banner} />
+                <LinkUI as="p" size="lg">
+                    <Link to={`/startup/${startup.id}`}>{startup.name}</Link>
+                </LinkUI>
+                <p className="text-sm text-gray-400">
+                    {numberFormat(startup.follower_count, "follower")} 🞄 founded
+                    on {formatDate(startup.founded_at * 1000, "yyyy-MM-dd")} 🞄
+                    added {formatDistanceToNow(startup.created_at * 1000)} ago
+                </p>
+                <p className="text-pretty">{startup.description}</p>
+            </CardBody>
+        </Card>
     )
 }

@@ -2,7 +2,8 @@
 
 from __future__ import annotations
 
-import re
+import contextlib
+import sqlite3
 
 from reproca.response import Response  # noqa: TCH002
 
@@ -10,34 +11,26 @@ from . import service, sessions
 from .blog import get_poll
 from .db import Row, db
 from .misc import seconds_since_1970
-from .models import Follower, FoundUser, User, UserBlog, UserHandle, UserSession
+from .models import (
+    BIO,
+    EMAIL,
+    NAME,
+    PASSWORD,
+    URL,
+    USERNAME,
+    Follower,
+    Followers,
+    User,
+    UserBlog,
+    UserHandle,
+    UserSession,
+    UserStartup,
+)
 from .password import (
     hash_password,
     is_password_matching,
-    is_password_ok,
     password_needs_rehash,
 )
-
-USERNAME_RE = re.compile(r"[a-zA-Z0-9\-_]{1,64}")
-EMAIL_RE = re.compile(
-    r"^[a-zA-Z0-9.!#$%&'*+\/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$",
-)
-
-
-def is_username_ok(username: str) -> bool:
-    """Return true if username is valid."""
-    return bool(USERNAME_RE.fullmatch(username))
-
-
-def is_email_ok(email: str) -> bool:
-    """Return true if email is valid."""
-    return bool(EMAIL_RE.fullmatch(email))
-
-
-def username_to_name(username: str) -> str:
-    """Convert username to name."""
-    parts = username.split("_")
-    return " ".join(part.capitalize() for part in parts)
 
 
 @service.method
@@ -57,7 +50,7 @@ async def get_session(session: UserSession | None) -> UserSession | None:
 @service.method
 async def login(response: Response, username: str, password: str) -> bool:
     """Login to account."""
-    if not (is_username_ok(username) and is_password_ok(password)):
+    if USERNAME.is_invalid(username) or PASSWORD.is_invalid(password):
         return False
     con, cur = db()
     cur.execute(
@@ -108,10 +101,19 @@ async def register(
     password: str,
     name: str,
     email: str,
+    avatar: str,
+    bio: str,
+    link: str,
 ) -> bool:
     """Register new user."""
-    if not (
-        is_username_ok(username) and is_password_ok(password) and is_email_ok(email)
+    if (
+        USERNAME.is_invalid(username)
+        or PASSWORD.is_invalid(password)
+        or NAME.is_invalid(name)
+        or EMAIL.is_invalid(email)
+        or URL.is_invalid(avatar)
+        or BIO.is_invalid(bio)
+        or URL.is_invalid(link)
     ):
         return False
     con, cur = db()
@@ -122,14 +124,17 @@ async def register(
     cur.execute(
         """
         INSERT INTO
-        User (Username, Password, Name, Email, CreatedAt, LastSeenAt)
-        VALUES (?, ?, ?, ?, ?, ?)
+        User (Username, Password, Name, Email, Avatar, Bio, Link, CreatedAt, LastSeenAt)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
         """,
         [
             username,
             hash_password(password, created_at),
             name,
             email,
+            avatar,
+            bio,
+            link,
             created_at,
             created_at,
         ],
@@ -146,15 +151,15 @@ async def set_password(
     new_password: str,
 ) -> bool:
     """Change password if old password is given, requires user be logged-in."""
-    if not (is_password_ok(old_password) and is_password_ok(new_password)):
+    if PASSWORD.is_invalid(old_password) or PASSWORD.is_invalid(new_password):
         return False
     con, cur = db()
     cur.execute("SELECT Password FROM User WHERE ID = ?", [session.id])
-    row: Row | None = cur.fetchone()
-    if row is None:
+    user: Row | None = cur.fetchone()
+    if user is None:
         msg = "User deleted while logged-in."
-        raise Exception(msg)
-    if not is_password_matching(row.Password, old_password, session.created_at):
+        raise ValueError(msg)
+    if not is_password_matching(user.Password, old_password, session.created_at):
         return False
     cur.execute(
         "UPDATE User SET Password = ? WHERE ID = ?",
@@ -168,46 +173,42 @@ async def set_password(
 @service.method
 async def update_user(
     session: UserSession,
-    avatar: str | None,
-    link: str | None,
-    email: str | None,
-    name: str | None,
-    bio: str | None,
+    name: str,
+    email: str,
+    avatar: str,
+    bio: str,
+    link: str,
 ) -> None:
     """Change given details for user."""
-    params = []
-    fields = []
-    if avatar is not None:
-        fields.append("Avatar = ?")
-        params.append(avatar)
-    if link is not None:
-        fields.append("Link = ?")
-        params.append(link)
-    if email is not None and is_email_ok(email):
-        fields.append("Email = ?")
-        params.append(email)
-    if name is not None:
-        fields.append("Name = ?")
-        params.append(name)
-    if bio is not None:
-        fields.append("Bio = ?")
-        params.append(bio)
-    if fields:
-        con, cur = db()
-        update_query = f"UPDATE User SET {', '.join(fields)} WHERE ID = ?"  # noqa: S608
-        params.append(session.id)
-        cur.execute(update_query, params)
-        con.commit()
+    if (
+        NAME.is_invalid(name)
+        or EMAIL.is_invalid(email)
+        or URL.is_invalid(avatar)
+        or URL.is_invalid(link)
+        or BIO.is_invalid(bio)
+    ):
+        return
+    con, cur = db()
+    cur.execute(
+        """
+        UPDATE User SET Name = ?, Email = ?, Avatar = ?, Bio = ?, Link = ? WHERE ID = ?
+        """,
+        [name, email, avatar, bio, link, session.id],
+    )
+    con.commit()
 
 
 @service.method
 async def follow_user(session: UserSession, user_id: int) -> None:
     """Follow a user."""
     con, cur = db()
-    cur.execute(
-        "INSERT INTO UserFollower (Follower, Following, CreatedAt) VALUES (?, ?, ?)",
-        [session.id, user_id, seconds_since_1970()],
-    )
+    with contextlib.suppress(sqlite3.IntegrityError):
+        cur.execute(
+            """
+            INSERT INTO UserFollower (Follower, Following, CreatedAt) VALUES (?, ?, ?)
+            """,
+            [session.id, user_id, seconds_since_1970()],
+        )
     con.commit()
 
 
@@ -228,65 +229,71 @@ async def get_user(session: UserSession | None, username: str) -> User | None:
     _, cur = db()
     cur.execute(
         """
-        SELECT ID, Name, Email, Link, Avatar, Bio, CreatedAt, LastSeenAt
+        SELECT
+            ID,
+            Name,
+            Email,
+            Link,
+            Avatar,
+            Bio,
+            CreatedAt,
+            LastSeenAt,
+            (SELECT COUNT(ID) FROM UserFollower WHERE Following = User.ID)
+            FollowerCount,
+            (SELECT TRUE FROM UserFollower WHERE Follower = ? AND Following = User.ID)
+            IsFollowing
         FROM User
         WHERE Username = ?
         """,
-        [username],
+        [session and session.id, username],
     )
     user: Row | None = cur.fetchone()
     if user is None:
         return None
     cur.execute(
         """
-        SELECT User.ID, Username, Name, Avatar, F.CreatedAt
-        FROM User INNER JOIN UserFollower F
-        WHERE Following = ? AND User.ID = Follower
+        SELECT User.ID, Username, Name, Avatar, UserFollower.CreatedAt
+        FROM UserFollower
+        INNER JOIN User ON User.ID = Follower
+        WHERE
+            Following = ?
+            AND Follower IN (SELECT Following FROM UserFollower WHERE Follower = ?)
+        LIMIT 4
         """,
-        [user.ID],
+        [user.ID, session and session.id],
     )
-    followers = [
-        Follower(
-            id=follower.ID,
-            username=follower.Username,
-            name=follower.Name,
-            avatar=follower.Avatar,
-            created_at=follower.CreatedAt,
-        )
-        for follower in cur.fetchall()
-    ]
+    followers = cur.fetchall()
     cur.execute(
         """
-        SELECT User.ID, Username, Name, Avatar, F.CreatedAt
-        FROM User INNER JOIN UserFollower F
-        WHERE Follower = ? AND User.ID = Following
+        SELECT ID, Title, Content, IsPoll, CreatedAt
+        FROM Blog
+        WHERE Author = ?
+        ORDER BY CreatedAt DESC
         """,
         [user.ID],
     )
-    following = [
-        Follower(
-            id=follower.ID,
-            username=follower.Username,
-            name=follower.Name,
-            avatar=follower.Avatar,
-            created_at=follower.CreatedAt,
-        )
-        for follower in cur.fetchall()
-    ]
+    blogs = cur.fetchall()
     cur.execute(
-        "SELECT ID, Title, Content, IsPoll, CreatedAt FROM Blog WHERE Author = ?",
+        """
+        SELECT
+            Startup.ID,
+            Name,
+            Description,
+            Keynote,
+            Banner,
+            Founder.FoundedAt,
+            Startup.CreatedAt,
+            (SELECT COUNT(ID) FROM StartupFollower WHERE Startup = Startup.ID)
+            FollowerCount
+        FROM Startup
+        JOIN Founder
+        ON Startup = Startup.ID
+        WHERE Founder = ?
+        ORDER BY Founder.FoundedAt DESC
+        """,
         [user.ID],
     )
-    blogs = [
-        UserBlog(
-            id=blog.ID,
-            title=blog.Title,
-            content=blog.Content,
-            created_at=blog.CreatedAt,
-            poll=get_poll(blog.ID, session, cur) if blog.IsPoll else None,
-        )
-        for blog in cur.fetchall()
-    ]
+    startups = cur.fetchall()
     return User(
         id=user.ID,
         username=username,
@@ -297,64 +304,100 @@ async def get_user(session: UserSession | None, username: str) -> User | None:
         bio=user.Bio,
         created_at=user.CreatedAt,
         last_seen_at=user.LastSeenAt,
-        followers=followers,
-        following=following,
-        blogs=blogs,
+        followers=Followers(
+            mutuals=[
+                Follower(
+                    id=follower.ID,
+                    username=follower.Username,
+                    name=follower.Name,
+                    avatar=follower.Avatar,
+                    created_at=follower.CreatedAt,
+                )
+                for follower in followers
+            ],
+            follower_count=user.FollowerCount,
+            is_following=bool(user.IsFollowing),
+        ),
+        blogs=[
+            UserBlog(
+                id=blog.ID,
+                title=blog.Title,
+                content=blog.Content,
+                created_at=blog.CreatedAt,
+                poll=get_poll(blog.ID, session, cur) if blog.IsPoll else None,
+            )
+            for blog in blogs
+        ],
+        startups=[
+            UserStartup(
+                id=startup.ID,
+                name=startup.Name,
+                description=startup.Description,
+                keynote=startup.Keynote,
+                banner=startup.Banner,
+                created_at=startup.CreatedAt,
+                founded_at=startup.FoundedAt,
+                follower_count=startup.FollowerCount,
+            )
+            for startup in startups
+        ],
     )
 
 
 @service.method
-async def get_users() -> list[UserHandle]:
-    """Get all users."""
-    _con, cur = db()
+async def find_user(username: str) -> UserHandle | None:
+    """Find user by username."""
+    _, cur = db()
     cur.execute(
         """
         SELECT
-            U.ID,
-            U.Username,
-            U.Name,
-            U.Avatar,
-            COUNT(DISTINCT Follower.ID) AS FollowerCount,
-            COUNT(DISTINCT Following.ID) AS FollowingCount
-        FROM
-            User U
-        LEFT JOIN
-            UserFollower UF1 ON U.ID = UF1.Following
-        LEFT JOIN
-            UserFollower UF2 ON U.ID = UF2.Follower
-        LEFT JOIN
-            User AS Follower ON UF1.Follower = Follower.ID
-        LEFT JOIN
-            User AS Following ON UF2.Following = Following.ID
-        GROUP BY
-            U.ID
-        ORDER BY
-            U.LastSeenAt DESC
+            ID,
+            Name,
+            Avatar,
+            (SELECT COUNT(ID) FROM UserFollower WHERE Following = User.ID)
+            FollowerCount
+        FROM User
+        WHERE Username = ?
+        """,
+        [username],
+    )
+    row: Row | None = cur.fetchone()
+    if row is None:
+        return None
+    return UserHandle(
+        id=row.ID,
+        username=username,
+        name=row.Name,
+        avatar=row.Avatar,
+        follower_count=row.FollowerCount,
+    )
+
+
+@service.method
+async def top_users() -> list[UserHandle]:
+    """Return top users."""
+    _, cur = db()
+    cur.execute(
+        """
+        SELECT
+            ID,
+            Username,
+            Name,
+            Avatar,
+            (SELECT COUNT(ID) FROM UserFollower WHERE Following = User.ID)
+            FollowerCount
+        FROM User
+        ORDER BY FollowerCount DESC
+        LIMIT 5
         """
     )
     return [
         UserHandle(
-            id=row.ID,
-            username=row.Username,
-            name=row.Name,
-            avatar=row.Avatar,
-            follower_count=row.FollowerCount,
-            following_count=row.FollowingCount,
+            id=user.ID,
+            username=user.Username,
+            name=user.Name,
+            avatar=user.Avatar,
+            follower_count=user.FollowerCount,
         )
-        for row in cur.fetchall()
+        for user in cur.fetchall()
     ]
-
-
-@service.method
-async def find_user(username: str) -> FoundUser | None:
-    """Find user by username."""
-    _, cur = db()
-    cur.execute("SELECT ID, Name, Avatar FROM User WHERE Username = ?", [username])
-    row: Row | None = cur.fetchone()
-    if row is None:
-        return None
-    return FoundUser(
-        id=row.ID,
-        name=row.Name,
-        avatar=row.Avatar,
-    )

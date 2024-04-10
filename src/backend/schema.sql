@@ -4,11 +4,11 @@ create table if not exists User (
     ID integer primary key not null,
     Username text not null unique,
     Password text not null,
-    Email text not null,
-    Link text not null default '',
-    Avatar text not null default '',
     Name text not null,
-    Bio text not null default '',
+    Email text not null,
+    Avatar text not null,
+    Bio text not null,
+    Link text not null,
     CreatedAt integer not null,
     LastSeenAt integer not null
 ) strict;
@@ -73,6 +73,7 @@ create table if not exists StartupFollower (
 
 create table if not exists Founder (
     ID integer primary key not null,
+    Keynote text not null default '',
     Startup integer not null,
     Founder integer not null,
     FoundedAt integer not null,
@@ -80,6 +81,18 @@ create table if not exists Founder (
     foreign key (Startup) references Startup(ID) on delete cascade,
     foreign key (Founder) references User(ID) on delete cascade,
     unique (Startup, Founder)
+) strict;
+
+create table if not exists Investor (
+    ID integer primary key not null,
+    Keynote text not null,
+    Startup integer not null,
+    Investor integer not null,
+    InvestedAt integer not null,
+    CreatedAt integer not null,
+    foreign key (Startup) references Startup(ID) on delete cascade,
+    foreign key (Investor) references User(ID) on delete cascade,
+    unique (Startup, Investor)
 ) strict;
 
 end transaction;

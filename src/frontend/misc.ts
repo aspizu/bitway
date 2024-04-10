@@ -25,3 +25,18 @@ export function DateToInteger(date: Date): number {
         ) / 1000
     )
 }
+
+export function numberFormat(number: number, noun: string): string {
+    if (number === 0) {
+        return "no " + noun + "s"
+    }
+    return (
+        new Intl.NumberFormat(undefined, {
+            notation: "compact",
+            compactDisplay: "long",
+        }).format(number) +
+        " " +
+        noun +
+        s(number)
+    )
+}

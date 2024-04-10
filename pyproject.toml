@@ -7,6 +7,8 @@ dependencies = [
     "argon2-cffi>=23.1.0",
     "rich>=13.7.1",
     "whatwg-url>=2018.8.26",
+    "requests>=2.31.0",
+    "vald @ file:///home/aspizu/Documents/Projects/vald",
 ]
 readme = "README.md"
 requires-python = ">= 3.8"
@@ -21,8 +23,9 @@ managed          = true
 dev-dependencies = ["uvicorn>=0.29.0"]
 
 [tool.rye.scripts]
-dev     = { cmd = "uvicorn src.backend:app --reload" }
-migrate = { call = "backend:migrate" }
+dev          = { cmd = "uvicorn src.backend:app --reload" }
+migrate      = { call = "backend:migrate" }
+llm_database = { call = 'backend.llm_database:main' }
 
 [tool.hatch.metadata]
 allow-direct-references = true

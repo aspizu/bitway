@@ -13,7 +13,6 @@ import {Link} from "react-router-dom"
 import * as api from "~/api"
 import {useFormInput} from "~/hooks/form"
 import {Icon} from "~/icons"
-import {passwordError, usernameError} from "~/models"
 import {fetchSession} from "~/session"
 
 function LoginPopover({
@@ -21,10 +20,13 @@ function LoginPopover({
 }: {
     titleProps: DOMAttributes<HTMLElement>
 }) {
-    const password = useFormInput({onEnter: onLogin, error: passwordError})
+    const password = useFormInput({
+        onEnter: onLogin,
+        error: api.PASSWORD.getErrorMsg,
+    })
     const username = useFormInput({
         onEnter: () => password.ref.current?.focus(),
-        error: usernameError,
+        error: api.USERNAME.getErrorMsg,
     })
     const isVisible = useSignal(false)
     async function onLogin() {

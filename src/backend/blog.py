@@ -56,7 +56,7 @@ async def delete_blog(session: UserSession, blog_id: int) -> None:
 @service.method
 async def get_blogs(session: UserSession | None) -> list[Blog]:
     """Get all blog posts."""
-    _con, cur = db()
+    _, cur = db()
     cur.execute(
         """
         SELECT
@@ -137,8 +137,7 @@ async def vote_poll(session: UserSession, blog_id: int, option_id: int) -> None:
         return
     cur.execute(
         """
-        INSERT INTO PollVote (Blog, Option, Voter)
-        VALUES (?, ?, ?)
+        INSERT INTO PollVote (Blog, Option, Voter) VALUES (?, ?, ?)
         """,
         [blog_id, option_id, session.id],
     )

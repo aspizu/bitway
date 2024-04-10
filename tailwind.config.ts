@@ -18,11 +18,11 @@ export default {
         nextui({
             addCommonColors: true,
             layout: {
-                /*radius: {
+                radius: {
                     small: "4px",
                     medium: "6px",
                     large: "8px",
-                },*/
+                },
             },
         }),
     ],

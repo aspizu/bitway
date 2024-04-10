@@ -3,6 +3,55 @@
 from __future__ import annotations
 
 from msgspec import Struct
+from vald import StringType
+
+from . import export_string_type
+
+USERNAME = export_string_type(
+    "USERNAME",
+    StringType()
+    .min(3, "Username must be at least $ characters long.")
+    .max(32, "Username cannot be longer than $ characters.")
+    .regex(
+        r"[.\-_a-zA-Z][.\-_a-zA-Z0-9]*",
+        "Username can only contain letters, numbers, dots, hyphens, and underscores.",
+    ),
+)
+PASSWORD = export_string_type(
+    "PASSWORD", StringType().min(8, "Password must be at least $ characters long.")
+)
+EMAIL = export_string_type("EMAIL", StringType().email())
+NAME = export_string_type(
+    "NAME",
+    StringType()
+    .not_empty("Name cannot be empty.")
+    .max(64, "Name cannot be longer than $ characters."),
+)
+BIO = export_string_type(
+    "BIO", StringType().empty().max(256, "Bio cannot be longer than $ characters.")
+)
+URL = export_string_type(
+    "URL",
+    StringType().empty().url().max(1024, "URL cannot be longer than $ characters."),
+)
+BLOG_TITLE = export_string_type(
+    "BLOG_TITLE",
+    StringType()
+    .not_empty("Title cannot be empty.")
+    .max(128, "Title cannot be longer than $ characters."),
+)
+BLOG_CONTENT = export_string_type(
+    "BLOG_CONTENT",
+    StringType()
+    .not_empty("Content cannot be empty.")
+    .max(4096, "Content cannot be longer than $ characters."),
+)
+POLL_OPTION = export_string_type(
+    "POLL_OPTION",
+    StringType()
+    .not_empty("Option cannot be empty.")
+    .max(128, "Option cannot be longer than $ characters."),
+)
 
 
 class UserSession(Struct):
@@ -31,9 +80,9 @@ class User(Struct):
     bio: str
     created_at: int
     last_seen_at: int
-    followers: list[Follower]
-    following: list[Follower]
+    followers: Followers
     blogs: list[UserBlog]
+    startups: list[UserStartup]
 
 
 class Follower(Struct):
@@ -94,7 +143,6 @@ class UserHandle(Struct):
     name: str
     avatar: str
     follower_count: int
-    following_count: int
 
 
 class Startup(Struct):
@@ -107,6 +155,7 @@ class Startup(Struct):
     founded_at: int
     created_at: int
     founders: list[Founder]
+    followers: Followers
 
 
 class Founder(Struct):
@@ -116,6 +165,7 @@ class Founder(Struct):
     username: str
     name: str
     avatar: str
+    keynote: str
     founded_at: int
     follower_count: int
 
@@ -126,3 +176,22 @@ class FoundUser(Struct):
     id: int
     name: str
     avatar: str
+
+
+class Followers(Struct):
+    mutuals: list[Follower]
+    follower_count: int
+    is_following: bool
+
+
+class UserStartup(Struct):
+    """User startup."""
+
+    id: int
+    name: str
+    description: str
+    keynote: str
+    banner: str
+    founded_at: int
+    created_at: int
+    follower_count: int

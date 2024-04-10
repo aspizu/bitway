@@ -5,6 +5,7 @@ export default defineConfig({
     root: "./src/frontend",
     envDir: "../../",
     publicDir: "./public",
+
     resolve: {
         alias: [
             {
@@ -24,6 +25,7 @@ export default defineConfig({
     ],
     build: {
         target: "esnext",
+        outDir: "../../dist",
     },
     // server: {
     //     proxy: {

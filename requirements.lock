@@ -14,10 +14,15 @@ argon2-cffi==23.1.0
     # via backend
 argon2-cffi-bindings==21.2.0
     # via argon2-cffi
+certifi==2024.2.2
+    # via requests
 cffi==1.16.0
     # via argon2-cffi-bindings
+charset-normalizer==3.3.2
+    # via requests
 idna==3.6
     # via anyio
+    # via requests
     # via whatwg-url
 ipaddress==1.0.23
     # via whatwg-url
@@ -35,6 +40,8 @@ python-multipart==0.0.9
     # via reproca
 reproca @ file:///home/aspizu/Documents/Projects/reproca/reproca_server
     # via backend
+requests==2.31.0
+    # via backend
 rich==13.7.1
     # via backend
 six==1.16.0
@@ -45,5 +52,10 @@ starlette==0.34.0
     # via reproca
 typing-extensions==4.10.0
     # via reproca
+urllib3==2.2.1
+    # via requests
+vald @ file:///home/aspizu/Documents/Projects/vald
+    # via backend
 whatwg-url==2018.8.26
     # via backend
+    # via vald

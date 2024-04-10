@@ -2,12 +2,14 @@
 
 from __future__ import annotations
 
+import contextlib
+import sqlite3
 from typing import TYPE_CHECKING
 
 from . import service
 from .db import db
 from .misc import seconds_since_1970
-from .models import Founder, Startup, UserSession
+from .models import BIO, NAME, URL, Follower, Followers, Founder, Startup, UserSession
 
 if TYPE_CHECKING:
     from sqlite3 import Cursor
@@ -27,6 +29,8 @@ async def create_startup(
     session: UserSession, name: str, description: str, banner: str, founded_at: int
 ) -> int | None:
     """Create a startup."""
+    if NAME.is_invalid(name) or BIO.is_invalid(description) or URL.is_invalid(banner):
+        return None
     con, cur = db()
     cur.execute(
         """
@@ -49,40 +53,6 @@ async def create_startup(
 
 
 @service.method
-async def add_founder(
-    session: UserSession, startup_id: int, founder_id: int, founded_at: int
-) -> None:
-    """Fails if startup is not founded by current user."""
-    con, cur = db()
-    if not is_startup_founded_by(cur, startup_id, session.id):
-        return
-    cur.execute(
-        """
-        INSERT INTO Founder (Startup, Founder, FoundedAt, CreatedAt) VALUES (?, ?, ?, ?)
-        """,
-        [startup_id, founder_id, founded_at, seconds_since_1970()],
-    )
-    con.commit()
-
-
-@service.method
-async def remove_founder(
-    session: UserSession, startup_id: int, founder_id: int
-) -> None:
-    """Remove a founder from a startup, only founders can remove other founders."""
-    con, cur = db()
-    if not is_startup_founded_by(cur, startup_id, session.id):
-        return
-    cur.execute("SELECT COUNT(ID) Count FROM Founder WHERE Startup = ?", [startup_id])
-    if cur.fetchone().Count == 1:
-        return
-    cur.execute(
-        "DELETE FROM Founder WHERE Startup = ?, Founder = ?", [startup_id, founder_id]
-    )
-    con.commit()
-
-
-@service.method
 async def delete_startup(session: UserSession, startup_id: int) -> None:
     """Only founders can delete startups."""
     con, cur = db()
@@ -93,7 +63,7 @@ async def delete_startup(session: UserSession, startup_id: int) -> None:
 
 
 @service.method
-async def edit_startup(
+async def update_startup(
     session: UserSession,
     startup_id: int,
     name: str,
@@ -102,6 +72,8 @@ async def edit_startup(
     founded_at: int,
 ) -> None:
     """Only founders can edit startups."""
+    if NAME.is_invalid(name) or BIO.is_invalid(description) or URL.is_invalid(banner):
+        return
     con, cur = db()
     if not is_startup_founded_by(cur, startup_id, session.id):
         return
@@ -117,28 +89,62 @@ async def edit_startup(
 
 
 @service.method
-async def get_startup(startup_id: int) -> Startup | None:
+async def get_startup(session: UserSession | None, startup_id: int) -> Startup | None:
     """Get a startup."""
     _con, cur = db()
     cur.execute(
         """
-        SELECT Name, Description, Banner, FoundedAt, CreatedAt FROM Startup WHERE ID = ?
+        SELECT
+            Name,
+            Description,
+            Banner,
+            FoundedAt,
+            CreatedAt,
+            (SELECT COUNT(ID) FROM StartupFollower WHERE Following = Startup.ID)
+            FollowerCount,
+            (
+                SELECT TRUE FROM StartupFollower
+                WHERE Following = Startup.ID AND Follower = ?
+            )
+            IsFollowing
+        FROM Startup WHERE ID = ?
         """,
-        [startup_id],
+        [session and session.id, startup_id],
     )
     startup = cur.fetchone()
     if startup is None:
         return None
     cur.execute(
         """
+        SELECT User.ID, Username, Name, Avatar, StartupFollower.CreatedAt
+        FROM StartupFollower
+        INNER JOIN User ON User.ID = Follower
+        WHERE
+            Following = ?
+            AND Follower IN (SELECT Following FROM UserFollower WHERE Follower = ?)
+        LIMIT 4
+        """,
+        [startup_id, session and session.id],
+    )
+    followers = cur.fetchall()
+    cur.execute(
+        """
         SELECT
-        User.ID, Username, Name, Avatar, FoundedAt
+            User.ID,
+            Username,
+            Name,
+            Avatar,
+            Keynote,
+            FoundedAt,
+            (SELECT COUNT(ID) FROM UserFollower WHERE Following = User.ID)
+            FollowerCount
         FROM Founder
         INNER JOIN User ON Founder = User.ID
         WHERE Startup = ?
         """,
         [startup_id],
     )
+    founders = cur.fetchall()
     return Startup(
         id=startup_id,
         name=startup.Name,
@@ -152,9 +158,50 @@ async def get_startup(startup_id: int) -> Startup | None:
                 username=founder.Username,
                 name=founder.Name,
                 avatar=founder.Avatar,
+                keynote=founder.Keynote,
                 founded_at=founder.FoundedAt,
-                follower_count=1,
+                follower_count=founder.FollowerCount,
             )
-            for founder in cur.fetchall()
+            for founder in founders
         ],
+        followers=Followers(
+            mutuals=[
+                Follower(
+                    id=follower.ID,
+                    username=follower.Username,
+                    name=follower.Name,
+                    avatar=follower.Avatar,
+                    created_at=follower.CreatedAt,
+                )
+                for follower in followers
+            ],
+            follower_count=startup.FollowerCount,
+            is_following=bool(startup.IsFollowing),
+        ),
     )
+
+
+@service.method
+async def follow_startup(session: UserSession, startup_id: int) -> None:
+    """Follow a startup."""
+    con, cur = db()
+    with contextlib.suppress(sqlite3.IntegrityError):
+        cur.execute(
+            """
+            INSERT INTO StartupFollower (Follower, Following, CreatedAt)
+            VALUES (?, ?, ?)
+            """,
+            [session.id, startup_id, seconds_since_1970()],
+        )
+    con.commit()
+
+
+@service.method
+async def unfollow_startup(session: UserSession, startup_id: int) -> None:
+    """Unfollow a startup."""
+    con, cur = db()
+    cur.execute(
+        "DELETE FROM StartupFollower WHERE Follower = ? AND Following = ?",
+        [session.id, startup_id],
+    )
+    con.commit()

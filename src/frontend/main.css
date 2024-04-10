@@ -3,6 +3,7 @@
 @tailwind utilities;
 
 .material-symbols {
+    user-select: none;
     display: inline-flex;
     align-items: center;
     justify-content: center;
