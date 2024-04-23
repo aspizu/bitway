@@ -54,7 +54,7 @@ POLL_OPTION = export_string_type(
 )
 
 
-class UserSession(Struct):
+class Session(Struct):
     """Reproca session store."""
 
     id: int

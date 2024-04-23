@@ -16,32 +16,32 @@ export const router = createBrowserRouter([
             {
                 index: true,
                 path: "/",
-                element: <Root />,
+                element: <Root />
             },
             {
                 path: "/user/:username",
-                element: <User />,
+                element: <User />
             },
             {
                 path: "/startup/:startupId",
-                element: <Startup />,
+                element: <Startup />
             },
             {
                 path: "/create-post",
-                element: <CreatePost />,
+                element: <CreatePost />
             },
             {
                 path: "/create-startup",
-                element: <CreateStartup />,
+                element: <CreateStartup />
             },
             {
                 path: "*",
-                element: <NotFoundPage />,
-            },
-        ],
+                element: <NotFoundPage />
+            }
+        ]
     },
     {
         path: "/create-account",
-        element: <CreateAccount />,
-    },
+        element: <CreateAccount />
+    }
 ])

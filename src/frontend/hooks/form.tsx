@@ -1,10 +1,5 @@
 import {Signal, useSignal} from "@preact/signals-react"
-import {
-    useRef,
-    type KeyboardEvent,
-    type MutableRefObject,
-    type RefObject,
-} from "react"
+import {useRef, type KeyboardEvent, type MutableRefObject, type RefObject} from "react"
 
 export interface FormInputOptions {
     onEnter?: () => void
@@ -37,15 +32,9 @@ export function useFormInput<T extends HTMLTextAreaElement>(
     options?: FormInputOptions
 ): FormInput<HTMLTextAreaElement>
 export function useFormInput<T extends HTMLInputElement | HTMLTextAreaElement>(
-    {
-        onEnter,
-        error,
-        default: default_,
-        allowEmpty,
-        onDebounce,
-    }: FormInputOptions = {
+    {onEnter, error, default: default_, allowEmpty, onDebounce}: FormInputOptions = {
         default: "",
-        allowEmpty: false,
+        allowEmpty: false
     }
 ): FormInput<T> {
     const value = useSignal(default_ ?? "")
@@ -89,7 +78,7 @@ export function useFormInput<T extends HTMLInputElement | HTMLTextAreaElement>(
                         onEnter?.()
                     }
                 }
-            },
-        },
+            }
+        }
     }
 }

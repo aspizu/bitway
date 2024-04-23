@@ -4,18 +4,19 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from . import service
+from reproca.method import method
+
 from .db import db
 from .misc import seconds_since_1970
-from .models import Blog, Poll, PollOption, UserSession
+from .models import Blog, Poll, PollOption, Session
 
 if TYPE_CHECKING:
     from sqlite3 import Cursor
 
 
-@service.method
+@method
 async def post_blog(
-    session: UserSession,
+    session: Session,
     title: str,
     content: str,
     poll_options: list[str] | None,
@@ -45,16 +46,16 @@ async def post_blog(
     return cur.lastrowid
 
 
-@service.method
-async def delete_blog(session: UserSession, blog_id: int) -> None:
+@method
+async def delete_blog(session: Session, blog_id: int) -> None:
     """Delete a blog post."""
     con, cur = db()
     cur.execute("DELETE FROM Blog WHERE ID = ? AND Author = ?", [blog_id, session.id])
     con.commit()
 
 
-@service.method
-async def get_blogs(session: UserSession | None) -> list[Blog]:
+@method
+async def get_blogs(session: Session | None) -> list[Blog]:
     """Get all blog posts."""
     _, cur = db()
     cur.execute(
@@ -92,7 +93,7 @@ async def get_blogs(session: UserSession | None) -> list[Blog]:
     ]
 
 
-def get_poll(blog_id: int, session: UserSession | None, cur: Cursor) -> Poll | None:
+def get_poll(blog_id: int, session: Session | None, cur: Cursor) -> Poll | None:
     """Get poll for a blog post."""
     cur.execute(
         """
@@ -122,8 +123,8 @@ def get_poll(blog_id: int, session: UserSession | None, cur: Cursor) -> Poll | N
     )
 
 
-@service.method
-async def vote_poll(session: UserSession, blog_id: int, option_id: int) -> None:
+@method
+async def vote_poll(session: Session, blog_id: int, option_id: int) -> None:
     """Vote in a poll."""
     con, cur = db()
     cur.execute(

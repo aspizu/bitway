@@ -5,78 +5,58 @@ from __future__ import annotations
 from pathlib import Path
 from typing import TYPE_CHECKING
 
+from reproca.app import App
 from reproca.code_generation import CodeGenerator
-from reproca.service import Service
+from reproca.method import methods
 from reproca.sessions import Sessions
-from starlette.applications import Starlette
-from starlette.config import Config
-from starlette.datastructures import CommaSeparatedStrings
-from starlette.middleware import Middleware
-from starlette.middleware.cors import CORSMiddleware
-from starlette.responses import FileResponse
-from starlette.routing import Mount, Route
-from starlette.staticfiles import StaticFiles
+
+from . import env
 
 if TYPE_CHECKING:
-    from starlette.requests import Request
     from vald import StringType
 
-    from .models import UserSession
+    from .models import Session
 
-config = Config(".env")
-DEBUG = config("DEBUG", cast=bool, default=False)
-ALLOW_ORIGINS = config("ALLOW_ORIGINS", cast=CommaSeparatedStrings)
-DATABASE = config("DATABASE")
-code_generator = CodeGenerator(Path("src/frontend/api.ts").open("w"))  # noqa: SIM115
-code_generator.write(
-    'import {type MethodResponse, Service} from "~/reproca"\n',
-    'import {StringType} from "vald/src/index"\n',  # noqa: RUF027
-    'const service = new Service(import.meta.env["VITE_BACKEND"])\n',
-)
+
+DEBUG = env.variables.get("DEBUG") == "true"
+DATABASE = env.variables["DATABASE"]
+print(f"{DEBUG=}, {DATABASE=}")
+
+
+strtypes = []
 
 
 def export_string_type(name: str, string_type: StringType) -> StringType:
-    code_generator.write(f"export const {name} = ", string_type.to_typescript(), "\n")
+    strtypes.append(f"export const {name} = " + string_type.to_typescript() + "\n")
     return string_type
 
 
-sessions: Sessions[int, UserSession] = Sessions()
-service = Service(sessions, debug=DEBUG, code_generator=code_generator)
+sessions: Sessions[int, Session] = Sessions()
 
 
-def load_modules(*modules: str) -> None:
-    """Load the modules."""
-    for module in modules:
-        __import__(__name__ + "." + module, globals(), locals())
+from . import blog, founder, startup, user  # noqa: E402
+
+__all__ = ["blog", "founder", "startup", "user"]
 
 
-load_modules("user", "blog", "startup", "founder")
+with Path("src/frontend/api.ts").open("w") as file:
+    code_generator = CodeGenerator(file)
+    code_generator.write(
+        """
+        import {type MethodResult, App} from "reproca/app"
+        import {circuitBreakerMiddleware} from "~/query"
+        import {StringType} from "vald/src/index"
+        const app = new App(import.meta.env.VITE_BACKEND, circuitBreakerMiddleware())
+        """,
+    )
+    for strtype in strtypes:
+        code_generator.write(strtype)
+    for method in methods.values():
+        code_generator.method(method)
+    code_generator.resolve()
 
 
-async def root(request: Request):
-    """Serve the index.html file."""
-    return FileResponse("dist/index.html")
-
-
-code_generator.resolve()
-code_generator.file.close()
-app = Starlette(
-    routes=[
-        *service.routes,
-        Route("/", root, methods=["GET"]),
-        Mount("/", app=StaticFiles(directory="dist")),
-        Route("/{path:path}", root, methods=["GET"]),
-    ],
-    middleware=[
-        Middleware(
-            CORSMiddleware,
-            allow_origins=ALLOW_ORIGINS,
-            allow_methods=["GET", "POST"],
-            allow_credentials=True,
-        )
-    ],
-    debug=DEBUG,
-)
+app = App(sessions)
 
 
 def migrate() -> None:

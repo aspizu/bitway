@@ -6,7 +6,7 @@ import {
     CardFooter,
     Divider,
     Input,
-    Textarea,
+    Textarea
 } from "@nextui-org/react"
 import {useSignal} from "@preact/signals-react"
 import {useRef} from "react"
@@ -20,30 +20,30 @@ import {session} from "~/session"
 export function CreatePost() {
     const navigate = useNavigate()
     const title = useFormInput({
-        onEnter: () => content.ref.current?.focus(),
+        onEnter: () => content.ref.current?.focus()
     })
     const content = useFormInput<HTMLTextAreaElement>({onEnter: onSubmit})
     const pollOptions = useSignal<string[]>([])
     const pollRef = useRef<HTMLDivElement>(null)
     async function onSubmit() {
-        if (
-            pollOptions.value.filter((option) => option.trim() === "")
-                .length !== 0
-        ) {
+        if (pollOptions.value.filter((option) => option.trim() === "").length !== 0) {
             toast.error("Poll options cannot be empty")
             return
         }
         if (!title.validate({focus: true})) return
         if (!content.validate({focus: true})) return
-        const response = await api.post_blog(
-            title.value.value,
-            content.value.value,
-            pollOptions.value.length === 0 ? null : pollOptions.value
-        )
-        if (response.ok) {
-            toast.success("Your post is live!")
-            navigate("/")
+        const result = await api.post_blog({
+            title: title.value.value,
+            content: content.value.value,
+            poll_options: pollOptions.value.length === 0 ? null : pollOptions.value
+        })
+        if (!result.ok || !result.value) {
+            toast.error("Something went wrong.")
+            return
         }
+        toast.success("Your post is live!")
+        navigate(`/user/${session.value!.username}`)
+        return
     }
     if (!session.value) return null
     return (
@@ -93,12 +93,10 @@ export function CreatePost() {
                                             ) {
                                                 pollOptions.value = [
                                                     ...pollOptions.value,
-                                                    "",
+                                                    ""
                                                 ]
                                                 setTimeout(() => {
-                                                    pollRef.current?.children[
-                                                        index + 1
-                                                    ]
+                                                    pollRef.current?.children[index + 1]
                                                         .querySelector("input")
                                                         ?.focus()
                                                 }, 200)
@@ -110,14 +108,13 @@ export function CreatePost() {
                                     }}
                                     value={option}
                                     onInput={(ev) => {
-                                        pollOptions.value =
-                                            pollOptions.value.map((o, i) =>
-                                                i === index
-                                                    ? (
-                                                          ev.target as HTMLInputElement
-                                                      ).value
-                                                    : o
-                                            )
+                                        pollOptions.value = pollOptions.value.map(
+                                            (o, i) =>
+                                                i === index ?
+                                                    (ev.target as HTMLInputElement)
+                                                        .value
+                                                :   o
+                                        )
                                     }}
                                     endContent={
                                         <Button
@@ -148,9 +145,9 @@ export function CreatePost() {
                             pollOptions.value = [...pollOptions.value, ""]
                         }}
                     >
-                        {pollOptions.value.length === 0
-                            ? "Add Poll"
-                            : "Add Poll Option"}
+                        {pollOptions.value.length === 0 ?
+                            "Add Poll"
+                        :   "Add Poll Option"}
                     </Button>
                 </CardFooter>
             </Card>

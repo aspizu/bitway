@@ -9,7 +9,7 @@ import {
     ModalContent,
     ModalFooter,
     ModalHeader,
-    useDisclosure,
+    useDisclosure
 } from "@nextui-org/react"
 import toast from "react-hot-toast"
 import {useNavigate} from "react-router-dom"
@@ -23,11 +23,7 @@ export function UserDropdown() {
         <>
             <Dropdown>
                 <DropdownTrigger>
-                    <Avatar
-                        as="button"
-                        isBordered
-                        src={session.value?.avatar}
-                    />
+                    <Avatar as="button" isBordered src={session.value?.avatar} />
                 </DropdownTrigger>
                 <DropdownMenu aria-label="User">
                     <DropdownItem
@@ -61,18 +57,14 @@ export function UserDropdown() {
                 <ModalContent>
                     {(onClose) => (
                         <>
-                            <ModalHeader>
-                                Are you sure you want to log out?
-                            </ModalHeader>
+                            <ModalHeader>Are you sure you want to log out?</ModalHeader>
                             <ModalFooter>
                                 <Button
                                     color="danger"
                                     onClick={async () => {
                                         await api.logout()
                                         fetchSession()
-                                        toast.success(
-                                            "Logged out successfully."
-                                        )
+                                        toast.success("Logged out successfully.")
                                         onClose()
                                     }}
                                 >

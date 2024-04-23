@@ -9,13 +9,9 @@ export function MutualFollowers({followers}: {followers: api.Followers}) {
             Followed by{" "}
             {followers.mutuals.map((mutual, i) => (
                 <>
-                    {i === followers.mutuals.length - 1
-                        ? " and "
-                        : i !== 0 && ", "}
+                    {i === followers.mutuals.length - 1 ? " and " : i !== 0 && ", "}
                     <LinkUI as="span" size="sm">
-                        <Link to={`/user/${mutual.username}`}>
-                            @{mutual.username}
-                        </Link>
+                        <Link to={`/user/${mutual.username}`}>@{mutual.username}</Link>
                     </LinkUI>
                 </>
             ))}

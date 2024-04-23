@@ -6,7 +6,7 @@ export function UserHandle({
     avatar,
     name,
     username,
-    followerCount,
+    followerCount
 }: {
     avatar: string
     name: string

@@ -8,11 +8,13 @@
     "preview": "bunx --bun vite preview"
   },
   "devDependencies": {
+    "@eslint/js": "^9.1.1",
     "@preact/signals-react-transform": "^0.3.1",
     "@types/bun": "latest",
     "@types/react": "^18.2.74",
     "@types/react-dom": "^18.2.23",
     "@vitejs/plugin-react": "^4.2.1",
+    "prettier": "^3.2.5",
     "vite": "^5.2.7"
   },
   "peerDependencies": {
@@ -23,6 +25,7 @@
     "@preact/signals-react": "^2.0.1",
     "autoprefixer": "^10.4.19",
     "date-fns": "^3.6.0",
+    "deepsignal": "^1.5.0",
     "framer-motion": "^11.0.24",
     "material-symbols": "^0.17.1",
     "particles.js": "^2.0.0",
@@ -31,7 +34,9 @@
     "react-date-picker": "^10.6.0",
     "react-dom": "^18.2.0",
     "react-hot-toast": "^2.4.1",
+    "react-markdown": "^9.0.1",
     "react-router-dom": "^6.22.3",
+    "reproca": "/home/aspizu/Documents/Projects/reproca/client/typescript",
     "tailwindcss": "^3.4.3",
     "vald": "/home/aspizu/Documents/Projects/vald"
   }

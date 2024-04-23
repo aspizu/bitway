@@ -3,13 +3,11 @@ import {signal} from "@preact/signals-react"
 export enum Theme {
     SYSTEM = "SYSTEM",
     LIGHT = "LIGHT",
-    DARK = "DARK",
+    DARK = "DARK"
 }
 
 function parseTheme(theme: string | null): Theme {
-    return theme && Object.keys(Theme).includes(theme)
-        ? (theme as Theme)
-        : Theme.SYSTEM
+    return theme && Object.keys(Theme).includes(theme) ? (theme as Theme) : Theme.SYSTEM
 }
 
 export const theme = signal<Theme>(parseTheme(localStorage.getItem("theme")))

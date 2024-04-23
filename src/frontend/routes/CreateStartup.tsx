@@ -1,11 +1,4 @@
-import {
-    Avatar,
-    Button,
-    Card,
-    CardBody,
-    Input,
-    Textarea,
-} from "@nextui-org/react"
+import {Avatar, Button, Card, CardBody, Input, Textarea} from "@nextui-org/react"
 import {useSignal} from "@preact/signals-react"
 import toast from "react-hot-toast"
 import {useNavigate} from "react-router-dom"
@@ -18,32 +11,32 @@ import {session} from "~/session"
 export function CreateStartup() {
     const navigate = useNavigate()
     const name = useFormInput({
-        onEnter: () => description.ref.current?.focus(),
+        onEnter: () => description.ref.current?.focus()
     })
     const description = useFormInput<HTMLTextAreaElement>({onEnter: onSubmit})
     const banner = useFormInput({
         allowEmpty: true,
-        onEnter: () => description.ref.current?.focus(),
+        onEnter: () => description.ref.current?.focus()
     })
     const foundedAt = useSignal(new Date())
     async function onSubmit() {
         if (!name.validate({focus: true})) return
         if (!description.validate({focus: true})) return
         if (!banner.validate({focus: true})) return
-        const response = await api.create_startup(
-            name.value.value,
-            description.value.value,
-            banner.value.value,
-            DateToInteger(foundedAt.value)
-        )
-        if (response.ok) {
-            toast.success("Your startup is live!")
-            setTimeout(() => {
-                navigate(`/startup/${response.ok}`)
-            }, 200)
-        } else {
+        const result = await api.create_startup({
+            name: name.value.value,
+            description: description.value.value,
+            banner: banner.value.value,
+            founded_at: DateToInteger(foundedAt.value)
+        })
+        if (!result.ok || !result.value) {
             toast.error("Something went wrong.")
+            return
         }
+        toast.success("Your startup is live!")
+        setTimeout(() => {
+            navigate(`/startup/${result.ok}`)
+        }, 200)
     }
     if (!session.value) return null
     return (

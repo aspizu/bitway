@@ -3,7 +3,7 @@ import {
     Dropdown,
     DropdownItem,
     DropdownMenu,
-    DropdownTrigger,
+    DropdownTrigger
 } from "@nextui-org/react"
 import {Icon} from "~/icons"
 import {isDark, theme} from "../theme"

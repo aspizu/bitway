@@ -4,15 +4,17 @@ import {
     CardBody,
     CardHeader,
     Divider,
+    Link,
     Modal,
     ModalBody,
     ModalContent,
     ModalFooter,
     ModalHeader,
-    useDisclosure,
+    useDisclosure
 } from "@nextui-org/react"
 import {formatDistanceToNow} from "date-fns"
 import toast from "react-hot-toast"
+import Markdown from "react-markdown"
 import * as api from "~/api"
 import {Icon} from "~/icons"
 import {numberFormat, readTime} from "~/misc"
@@ -30,7 +32,8 @@ export function Blog({
     content,
     createdAt,
     poll,
-    onDelete,
+    deleteBlog,
+    votePoll
 }: {
     userId: number
     avatar: string
@@ -42,13 +45,11 @@ export function Blog({
     content: string
     createdAt: number
     poll?: api.Poll
-    onDelete?: () => void
+    deleteBlog: typeof api.delete_blog
+    votePoll: typeof api.vote_poll
 }) {
     const {isOpen, onOpen, onClose} = useDisclosure()
-    const totalVotes = poll?.options.reduce(
-        (acc, option) => acc + option.votes,
-        0
-    )
+    const totalVotes = poll?.options.reduce((acc, option) => acc + option.votes, 0)
     return (
         <Card>
             <CardHeader className="gap-4">
@@ -58,7 +59,7 @@ export function Blog({
                     name={name}
                     followerCount={followerCount}
                 />
-                <div className="flex flex-col ml-auto text-sm text-gray-400">
+                <div className="flex flex-col items-end ml-auto text-sm text-gray-400">
                     <p>{formatDistanceToNow(createdAt * 1000)} ago</p>
                     {((readTimeText) => readTimeText && <p>{readTimeText}</p>)(
                         readTime(content)
@@ -80,7 +81,24 @@ export function Blog({
             <Divider />
             <CardBody className="max-h-[20rem]">
                 <p className="font-bold text-lg">{title}</p>
-                {content}
+                <Markdown
+                    allowedElements={[
+                        "a",
+                        "p",
+                        "ul",
+                        "ol",
+                        "li",
+                        "img",
+                        "strong",
+                        "em",
+                        "strike"
+                    ]}
+                    components={{
+                        a: (props) => <Link {...(props as any)} />
+                    }}
+                >
+                    {content}
+                </Markdown>
             </CardBody>
             {poll && (
                 <>
@@ -98,9 +116,11 @@ export function Blog({
                                         toast.error("You are not logged in.")
                                         return
                                     }
-                                    await api.vote_poll(blogId, option.id)
+                                    await votePoll({
+                                        blog_id: blogId,
+                                        option_id: option.id
+                                    })
                                     toast.success("Voted!")
-                                    onDelete?.()
                                 }}
                             />
                         ))}
@@ -124,10 +144,9 @@ export function Blog({
                                 <Button
                                     color="danger"
                                     onClick={async () => {
-                                        await api.delete_blog(blogId)
+                                        await deleteBlog({blog_id: blogId})
                                         toast.success("Blog was deleted.")
                                         onClose()
-                                        onDelete?.()
                                     }}
                                 >
                                     Delete
@@ -146,7 +165,7 @@ function PollOption({
     votes,
     totalVotes,
     isVoted,
-    onClick,
+    onClick
 }: {
     option: string
     votes: number
@@ -164,23 +183,19 @@ function PollOption({
                 group hover:cursor-pointer relative items-center flex border-1
                 rounded-small overflow-hidden
                 ${
-                    isVoted
-                        ? "border-primary text-white"
-                        : "border-content3 hover:border-content4 text-foreground-400 hover:text-foreground"
+                    isVoted ?
+                        "border-primary text-white"
+                    :   "border-content3 hover:border-content4 text-foreground-400 hover:text-foreground"
                 }`}
             onClick={onClick}
         >
             <div
                 className={`
                     left-0 top-0 h-[2rem]
-                    ${
-                        isVoted
-                            ? "bg-primary"
-                            : "bg-content2 group-hover:bg-content3"
-                    }
+                    ${isVoted ? "bg-primary" : "bg-content2 group-hover:bg-content3"}
                     `}
                 style={{
-                    width: `${percent}%`,
+                    width: `${percent}%`
                 }}
             />
 

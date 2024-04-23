@@ -1,11 +1,4 @@
-import {
-    Avatar,
-    Button,
-    Card,
-    CardBody,
-    Input,
-    Link as LinkUI,
-} from "@nextui-org/react"
+import {Avatar, Button, Card, CardBody, Input, Link as LinkUI} from "@nextui-org/react"
 import {Signal, useSignal} from "@preact/signals-react"
 import {useEffect} from "react"
 import toast from "react-hot-toast"
@@ -16,13 +9,13 @@ import {Icon} from "~/icons"
 
 enum Page {
     USERNAME_PASSWORD,
-    AVATAR_NAME_EMAIL,
+    AVATAR_NAME_EMAIL
 }
 
 function UsernamePassword({
     username,
     password,
-    repeatPassword,
+    repeatPassword
 }: {
     username: FormInput<HTMLInputElement>
     password: FormInput<HTMLInputElement>
@@ -44,7 +37,7 @@ function UsernamePassword({
 function AvatarNameEmail({
     page,
     name,
-    email,
+    email
 }: {
     page: Signal<Page>
     name: FormInput<HTMLInputElement>
@@ -70,7 +63,7 @@ function AvatarNameEmail({
                 <Avatar
                     size="lg"
                     style={{
-                        scale: "2",
+                        scale: "2"
                     }}
                 />
                 <Button size="sm" color="primary" radius="full">
@@ -97,23 +90,23 @@ export function CreateAccount() {
             if (value !== password.value.value) {
                 return "Passwords do not match."
             }
-        },
+        }
     })
     const password = useFormInput({
         onEnter: () => repeatPassword.ref.current?.focus(),
-        error: api.PASSWORD.getErrorMsg,
+        error: api.PASSWORD.getErrorMsg
     })
     const username = useFormInput({
         onEnter: () => password.ref.current?.focus(),
-        error: api.USERNAME.getErrorMsg,
+        error: api.USERNAME.getErrorMsg
     })
     const email = useFormInput({
         onEnter: onRegister,
-        error: api.EMAIL.getErrorMsg,
+        error: api.EMAIL.getErrorMsg
     })
     const name = useFormInput({
         onEnter: () => email.ref.current?.focus(),
-        error: api.NAME.getErrorMsg,
+        error: api.NAME.getErrorMsg
     })
     function nextPage() {
         if (!username.validate({focus: true})) return
@@ -128,26 +121,30 @@ export function CreateAccount() {
         }, 400)
     }
     async function onRegister() {
-        const response = await api.register(
-            username.value.value,
-            password.value.value,
-            name.value.value,
-            email.value.value,
-            "",
-            "",
-            ""
-        )
-        if (response.ok) {
+        const result = await api.register({
+            username: username.value.value,
+            password: password.value.value,
+            name: name.value.value,
+            email: email.value.value,
+            avatar: "",
+            bio: "",
+            link: ""
+        })
+        if (!result.ok) {
+            toast.error("Something went wrong.")
+            return
+        }
+        if (result.value) {
             toast.success("Account created successfully.")
             navigate("/")
-        } else {
-            toast.error("Username already exists.")
-            page.value = Page.USERNAME_PASSWORD
-            username.err.value = "Username already exists."
-            setTimeout(() => {
-                username.ref.current?.focus()
-            }, 400)
+            return
         }
+        toast.error("Username already exists.")
+        page.value = Page.USERNAME_PASSWORD
+        username.err.value = "Username already exists."
+        setTimeout(() => {
+            username.ref.current?.focus()
+        }, 200)
     }
     return (
         <main className="flex flex-col md:flex-row h-[100dvh] items-center justify-center gap-8">
@@ -161,19 +158,15 @@ export function CreateAccount() {
             </div>
             <Card className="md:w-[25rem] w-full bg-transparent shadow-none md:bg-content1 md:shadow-medium overflow-visible">
                 <CardBody className="gap-4 overflow-visible">
-                    {page.value === Page.USERNAME_PASSWORD ? (
+                    {page.value === Page.USERNAME_PASSWORD ?
                         <UsernamePassword
                             username={username}
                             password={password}
                             repeatPassword={repeatPassword}
                         />
-                    ) : page.value === Page.AVATAR_NAME_EMAIL ? (
-                        <AvatarNameEmail
-                            page={page}
-                            name={name}
-                            email={email}
-                        />
-                    ) : null}
+                    : page.value === Page.AVATAR_NAME_EMAIL ?
+                        <AvatarNameEmail page={page} name={name} email={email} />
+                    :   null}
                 </CardBody>
             </Card>
             <Button

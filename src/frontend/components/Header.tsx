@@ -4,7 +4,7 @@ import {
     Navbar,
     NavbarBrand,
     NavbarContent,
-    NavbarItem,
+    NavbarItem
 } from "@nextui-org/react"
 import {NavLink} from "react-router-dom"
 import bitwayDarkPng from "~/assets/bitway-dark.png"
@@ -31,12 +31,7 @@ export function Header() {
             <NavbarContent>
                 <Input
                     endContent={
-                        <Button
-                            isIconOnly
-                            radius="full"
-                            size="sm"
-                            variant="light"
-                        >
+                        <Button isIconOnly radius="full" size="sm" variant="light">
                             <Icon>search</Icon>
                         </Button>
                     }
@@ -47,7 +42,9 @@ export function Header() {
                     <ThemeDropdown />
                 </NavbarItem>
                 <NavbarItem>
-                    {session.value ? <UserDropdown /> : <Login />}
+                    {session.value ?
+                        <UserDropdown />
+                    :   <Login />}
                 </NavbarItem>
             </NavbarContent>
         </Navbar>

@@ -3,12 +3,12 @@ name = "backend"
 version = "0.0.1"
 authors = [{ name = "aspizu", email = "aspizu@protonmail.com" }]
 dependencies = [
-    "reproca @ file:///home/aspizu/Documents/Projects/reproca/reproca_server",
     "argon2-cffi>=23.1.0",
     "rich>=13.7.1",
     "whatwg-url>=2018.8.26",
     "requests>=2.31.0",
     "vald @ file:///home/aspizu/Documents/Projects/vald",
+    "reproca @ file:///home/aspizu/Documents/Projects/reproca",
 ]
 readme = "README.md"
 requires-python = ">= 3.8"

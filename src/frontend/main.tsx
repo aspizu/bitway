@@ -1,3 +1,4 @@
+import {effect} from "@preact/signals-react"
 import "material-symbols"
 import {createRoot} from "react-dom/client"
 import {Layout} from "~/layout"
@@ -16,4 +17,6 @@ isDark.subscribe((isDark) => {
 const root = createRoot(document.getElementById("app")!)
 root.render(<Layout />)
 
-fetchSession()
+effect(() => {
+    fetchSession()
+})

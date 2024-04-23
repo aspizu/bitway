@@ -5,7 +5,7 @@ import {
     Popover,
     PopoverContent,
     PopoverTrigger,
-    type DOMAttributes,
+    type DOMAttributes
 } from "@nextui-org/react"
 import {useSignal} from "@preact/signals-react"
 import toast from "react-hot-toast"
@@ -15,35 +15,35 @@ import {useFormInput} from "~/hooks/form"
 import {Icon} from "~/icons"
 import {fetchSession} from "~/session"
 
-function LoginPopover({
-    titleProps: _,
-}: {
-    titleProps: DOMAttributes<HTMLElement>
-}) {
+function LoginPopover({titleProps: _}: {titleProps: DOMAttributes<HTMLElement>}) {
     const password = useFormInput({
         onEnter: onLogin,
-        error: api.PASSWORD.getErrorMsg,
+        error: api.PASSWORD.getErrorMsg
     })
     const username = useFormInput({
         onEnter: () => password.ref.current?.focus(),
-        error: api.USERNAME.getErrorMsg,
+        error: api.USERNAME.getErrorMsg
     })
     const isVisible = useSignal(false)
     async function onLogin() {
         if (!(username.ref.current && password.ref.current)) return
         if (!username.validate({focus: true})) return
         if (!password.validate({focus: true})) return
-        const response = await api.login(
-            username.value.value,
-            password.value.value
-        )
-        if (response.ok) {
+        const result = await api.login({
+            username: username.value.value,
+            password: password.value.value
+        })
+        if (!result.ok) {
+            toast.error("Something went wrong.")
+            return
+        }
+        if (result.value) {
             toast.success("Logged in successfully.")
             fetchSession()
-        } else {
-            toast.error("Incorrect password.")
-            password.err.value = "Incorrect password."
+            return
         }
+        toast.error("Incorrect password.")
+        password.err.value = "Incorrect password."
     }
     return (
         <div className="flex flex-col gap-3 py-2 min-w-[20rem]">
@@ -62,9 +62,7 @@ function LoginPopover({
                             isVisible.value = !isVisible.value
                         }}
                     >
-                        <Icon>
-                            {isVisible.value ? "visibility" : "visibility_off"}
-                        </Icon>
+                        <Icon>{isVisible.value ? "visibility" : "visibility_off"}</Icon>
                     </Button>
                 }
             />

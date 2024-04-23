@@ -5,9 +5,10 @@ from __future__ import annotations
 import contextlib
 import sqlite3
 
-from reproca.response import Response  # noqa: TCH002
+from reproca.credentials import Credentials  # noqa: TCH002
+from reproca.method import method
 
-from . import service, sessions
+from . import sessions
 from .blog import get_poll
 from .db import Row, db
 from .misc import seconds_since_1970
@@ -20,10 +21,10 @@ from .models import (
     USERNAME,
     Follower,
     Followers,
+    Session,
     User,
     UserBlog,
     UserHandle,
-    UserSession,
     UserStartup,
 )
 from .password import (
@@ -33,8 +34,8 @@ from .password import (
 )
 
 
-@service.method
-async def get_session(session: UserSession | None) -> UserSession | None:
+@method
+async def get_session(session: Session | None) -> Session | None:
     """Return session user."""
     if session is not None:
         con, cur = db()
@@ -47,8 +48,8 @@ async def get_session(session: UserSession | None) -> UserSession | None:
     return session
 
 
-@service.method
-async def login(response: Response, username: str, password: str) -> bool:
+@method
+async def login(credentials: Credentials, username: str, password: str) -> bool:
     """Login to account."""
     if USERNAME.is_invalid(username) or PASSWORD.is_invalid(password):
         return False
@@ -70,10 +71,10 @@ async def login(response: Response, username: str, password: str) -> bool:
             [hash_password(password, row.CreatedAt), row.ID],
         )
         con.commit()
-    response.set_session(
+    credentials.set_session(
         sessions.create(
             row.ID,
-            UserSession(
+            Session(
                 id=row.ID,
                 username=username,
                 name=row.Name,
@@ -89,13 +90,15 @@ async def login(response: Response, username: str, password: str) -> bool:
     return True
 
 
-@service.method
-async def logout(response: Response) -> None:
+@method
+async def logout(credentials: Credentials) -> None:
     """Logout from account."""
-    response.logout()
+    if sessionid := credentials.get_session():
+        sessions.remove_by_sessionid(sessionid)
+    credentials.set_session(None)
 
 
-@service.method
+@method
 async def register(
     username: str,
     password: str,
@@ -143,10 +146,10 @@ async def register(
     return True
 
 
-@service.method
+@method
 async def set_password(
-    session: UserSession,
-    response: Response,
+    session: Session,
+    credentials: Credentials,
     old_password: str,
     new_password: str,
 ) -> bool:
@@ -165,14 +168,16 @@ async def set_password(
         "UPDATE User SET Password = ? WHERE ID = ?",
         [hash_password(new_password, session.created_at), session.id],
     )
-    response.logout()
+    if sessionid := credentials.get_session():
+        sessions.remove_by_sessionid(sessionid)
+    credentials.set_session(None)
     con.commit()
     return True
 
 
-@service.method
+@method
 async def update_user(
-    session: UserSession,
+    session: Session,
     name: str,
     email: str,
     avatar: str,
@@ -198,8 +203,8 @@ async def update_user(
     con.commit()
 
 
-@service.method
-async def follow_user(session: UserSession, user_id: int) -> None:
+@method
+async def follow_user(session: Session, user_id: int) -> None:
     """Follow a user."""
     con, cur = db()
     with contextlib.suppress(sqlite3.IntegrityError):
@@ -212,8 +217,8 @@ async def follow_user(session: UserSession, user_id: int) -> None:
     con.commit()
 
 
-@service.method
-async def unfollow_user(session: UserSession, user_id: int) -> None:
+@method
+async def unfollow_user(session: Session, user_id: int) -> None:
     """Unfollow a user."""
     con, cur = db()
     cur.execute(
@@ -223,8 +228,8 @@ async def unfollow_user(session: UserSession, user_id: int) -> None:
     con.commit()
 
 
-@service.method
-async def get_user(session: UserSession | None, username: str) -> User | None:
+@method
+async def get_user(session: Session | None, username: str) -> User | None:
     """Get all information about user."""
     _, cur = db()
     cur.execute(
@@ -344,7 +349,7 @@ async def get_user(session: UserSession | None, username: str) -> User | None:
     )
 
 
-@service.method
+@method
 async def find_user(username: str) -> UserHandle | None:
     """Find user by username."""
     _, cur = db()
@@ -373,7 +378,7 @@ async def find_user(username: str) -> UserHandle | None:
     )
 
 
-@service.method
+@method
 async def top_users() -> list[UserHandle]:
     """Return top users."""
     _, cur = db()

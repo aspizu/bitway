@@ -5,16 +5,17 @@ from __future__ import annotations
 import contextlib
 import sqlite3
 
-from . import service
+from reproca.method import method
+
 from .db import db
 from .misc import seconds_since_1970
-from .models import BIO, UserSession
+from .models import BIO, Session
 from .startup import is_startup_founded_by
 
 
-@service.method
+@method
 async def add_founder(
-    session: UserSession,
+    session: Session,
     startup_id: int,
     founder_id: int,
     keynote: str,
@@ -37,9 +38,9 @@ async def add_founder(
     con.commit()
 
 
-@service.method
+@method
 async def edit_founder(
-    session: UserSession,
+    session: Session,
     startup_id: int,
     founder_id: int,
     keynote: str,
@@ -60,10 +61,8 @@ async def edit_founder(
     con.commit()
 
 
-@service.method
-async def remove_founder(
-    session: UserSession, startup_id: int, founder_id: int
-) -> None:
+@method
+async def remove_founder(session: Session, startup_id: int, founder_id: int) -> None:
     """Remove a founder from a startup, only founders can remove other founders."""
     con, cur = db()
     if not is_startup_founded_by(cur, startup_id, session.id):

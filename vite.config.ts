@@ -10,23 +10,21 @@ export default defineConfig({
         alias: [
             {
                 find: "~",
-                replacement: fileURLToPath(
-                    new URL("./src/frontend", import.meta.url)
-                ),
-            },
-        ],
+                replacement: fileURLToPath(new URL("./src/frontend", import.meta.url))
+            }
+        ]
     },
     plugins: [
         react({
             babel: {
-                plugins: [["module:@preact/signals-react-transform"]],
-            },
-        }),
+                plugins: [["module:@preact/signals-react-transform"]]
+            }
+        })
     ],
     build: {
         target: "esnext",
-        outDir: "../../dist",
-    },
+        outDir: "../../dist"
+    }
     // server: {
     //     proxy: {
     //         "/proxy": {

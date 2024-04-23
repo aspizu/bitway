@@ -16,99 +16,164 @@ import {
     ModalContent,
     ModalFooter,
     ModalHeader,
+    Spinner,
     Textarea,
-    useDisclosure,
+    useDisclosure
 } from "@nextui-org/react"
 import {useSignal, useSignalEffect} from "@preact/signals-react"
 import {formatDate, formatDistanceToNow} from "date-fns"
 import toast from "react-hot-toast"
 import {useParams} from "react-router-dom"
+import type {MethodResult} from "reproca/app"
 import * as api from "~/api"
 import {UserHandle} from "~/components/UserHandle"
 import {useFormInput} from "~/hooks/form"
 import {Icon} from "~/icons"
 import {DateToInteger, numberFormat} from "~/misc"
-import {useSignalMethod, type MethodResponse} from "~/reproca"
+import {QueryType, useMutation, useQuery} from "~/query"
 import {session} from "~/session"
 import {MutualFollowers} from "./MutualFollowers"
 
 export function Startup() {
-    const addFounderModal = useDisclosure()
-    const editStartupModal = useDisclosure()
     const {startupId} = useParams()
-    const [startup, fetchStartup] = useSignalMethod(
-        () => api.get_startup(Number(startupId)),
-        {
-            clearWhileFetching: false,
+    const [startup, fetchStartup] = useQuery(() =>
+        api.get_startup({startup_id: Number(startupId)})
+    )
+    if (startup.type === QueryType.OK && startup.value?.id !== Number(startupId)) {
+        fetchStartup()
+    }
+    const updateStartup = useMutation(startup, fetchStartup, api.update_startup, {
+        update: (signal, {name, description, banner, founded_at}) => {
+            if (!signal) throw new Error("Startup not found")
+            signal.name = name
+            signal.description = description
+            signal.banner = banner
+            signal.founded_at = founded_at
         }
-    )
-    if (!startup.value?.ok) return null
-    const startupData = startup.value.ok
-    const sessionIsFounder = Boolean(
-        session.value &&
-            startupData.founders.find(
-                (founder) => founder.id === session.value!.id
+    })
+    const followStartup = useMutation(startup, fetchStartup, api.follow_startup, {
+        update: (signal, {}) => {
+            if (!signal) throw new Error("Startup not found")
+            signal.followers.is_following = true
+        }
+    })
+    const unfollowStartup = useMutation(startup, fetchStartup, api.unfollow_startup, {
+        update: (signal, {}) => {
+            if (!signal) throw new Error("Startup not found")
+            signal.followers.is_following = false
+        }
+    })
+    const editFounder = useMutation(startup, fetchStartup, api.edit_founder, {
+        update: (signal, {founder_id, keynote, founded_at}) => {
+            if (!signal) throw new Error("Startup not found")
+            const founder = signal.founders.find((founder) => founder.id === founder_id)
+            if (!founder) throw new Error("Founder not found")
+            founder.keynote = keynote
+            founder.founded_at = founded_at
+        }
+    })
+    const removeFounder = useMutation(startup, fetchStartup, api.remove_founder, {
+        update: (signal, {founder_id}) => {
+            if (!signal) throw new Error("Startup not found")
+            const index = signal.founders.findIndex(
+                (founder) => founder.id === founder_id
             )
-    )
+            if (index === -1) throw new Error("Founder not found")
+            signal.founders.splice(index, 1)
+        }
+    })
+    const addFounder = useMutation(startup, fetchStartup, api.add_founder)
     return (
         <main className="main-page gap-4">
+            {startup.type === QueryType.LOADING ?
+                <Spinner />
+            : startup.value ?
+                <StartupContent
+                    startup={startup.value}
+                    updateStartup={updateStartup}
+                    followStartup={followStartup}
+                    unfollowStartup={unfollowStartup}
+                    editFounder={editFounder}
+                    removeFounder={removeFounder}
+                    addFounder={addFounder}
+                />
+            :   <p>Startup not found</p>}
+        </main>
+    )
+}
+
+function StartupContent({
+    startup,
+    updateStartup,
+    followStartup,
+    unfollowStartup,
+    editFounder,
+    removeFounder,
+    addFounder
+}: {
+    startup: api.Startup
+    updateStartup: typeof api.update_startup
+    followStartup: typeof api.follow_startup
+    unfollowStartup: typeof api.unfollow_startup
+    editFounder: typeof api.edit_founder
+    removeFounder: typeof api.remove_founder
+    addFounder: typeof api.add_founder
+}) {
+    const addFounderModal = useDisclosure()
+    const editStartupModal = useDisclosure()
+    const sessionIsFounder = startup.founders.some(
+        (founder) => founder.id === session.value?.id
+    )
+    return (
+        <>
             <Card>
                 <CardHeader className="flex-col items-stretch gap-4 pb-0">
-                    <Image src={startupData.banner} />
+                    <Image src={startup.banner} />
                     <div className="flex items-center">
                         <div className="flex flex-col">
-                            <p className="font-bold text-xl">
-                                {startupData.name}
-                            </p>
+                            <p className="font-bold text-xl">{startup.name}</p>
                             <p className="text-sm text-gray-400">
                                 {numberFormat(
-                                    startupData.followers.follower_count,
+                                    startup.followers.follower_count,
                                     "follower"
                                 )}{" "}
                                 🞄 since{" "}
-                                {formatDate(
-                                    startupData.founded_at * 1000,
-                                    "yyyy-MM-dd"
-                                )}{" "}
-                                🞄 added{" "}
-                                {formatDistanceToNow(
-                                    startupData.created_at * 1000
-                                )}{" "}
+                                {formatDate(startup.founded_at * 1000, "yyyy-MM-dd")} 🞄
+                                added {formatDistanceToNow(startup.created_at * 1000)}{" "}
                                 ago
                             </p>
                         </div>
-                        <Button
-                            className="ml-auto"
-                            radius="full"
-                            color={
-                                startupData.followers.is_following
-                                    ? "default"
-                                    : "primary"
-                            }
-                            onClick={async () => {
-                                if (startupData.followers.is_following) {
-                                    await api.unfollow_startup(startupData.id)
-                                    toast.success(
-                                        `You are no longer following ${startupData.name}`
-                                    )
-                                } else {
-                                    await api.follow_startup(startupData.id)
-                                    toast.success(
-                                        `You are now following ${startupData.name}`
-                                    )
+                        {session.value && (
+                            <Button
+                                className="ml-auto"
+                                radius="full"
+                                color={
+                                    startup.followers.is_following ?
+                                        "default"
+                                    :   "primary"
                                 }
-                                fetchStartup()
-                            }}
-                        >
-                            {startupData.followers.is_following
-                                ? "Unfollow"
-                                : "Follow"}
-                        </Button>
+                                onClick={async () => {
+                                    if (startup.followers.is_following) {
+                                        await unfollowStartup({startup_id: startup.id})
+                                        toast.success(
+                                            `You are no longer following ${startup.name}`
+                                        )
+                                    } else {
+                                        await followStartup({startup_id: startup.id})
+                                        toast.success(
+                                            `You are now following ${startup.name}`
+                                        )
+                                    }
+                                }}
+                            >
+                                {startup.followers.is_following ? "Unfollow" : "Follow"}
+                            </Button>
+                        )}
                     </div>
                 </CardHeader>
                 <CardBody className="pt-0">
-                    <MutualFollowers followers={startupData.followers} />
-                    <p>{startupData.description}</p>
+                    <MutualFollowers followers={startup.followers} />
+                    <p>{startup.description}</p>
                     {sessionIsFounder && (
                         <Button
                             className="mt-2 mx-auto"
@@ -124,17 +189,17 @@ export function Startup() {
             <div
                 className="grid gap-4"
                 style={{
-                    gridTemplateColumns:
-                        "repeat(auto-fill, minmax(15rem, 1fr))",
+                    gridTemplateColumns: "repeat(auto-fill, minmax(15rem, 1fr))"
                 }}
             >
-                {startupData.founders.map((founder) => (
+                {startup.founders.map((founder) => (
                     <Founder
                         key={founder.id}
                         sessionIsFounder={sessionIsFounder}
-                        startup_id={startupData.id}
+                        startup_id={startup.id}
                         founder={founder}
-                        fetchStartup={fetchStartup}
+                        editFounder={editFounder}
+                        removeFounder={removeFounder}
                     />
                 ))}{" "}
                 {sessionIsFounder && (
@@ -148,38 +213,30 @@ export function Startup() {
                     </Button>
                 )}
             </div>
-            <Modal
-                isOpen={addFounderModal.isOpen}
-                onClose={addFounderModal.onClose}
-            >
+            <Modal isOpen={addFounderModal.isOpen} onClose={addFounderModal.onClose}>
                 <ModalContent>
                     {(onClose) => (
                         <AddFounderModal
-                            startupId={Number(startupId)}
-                            founderIds={startupData.founders.map(
-                                (founder) => founder.id
-                            )}
+                            startupId={Number(startup.id)}
+                            founderIds={startup.founders.map((founder) => founder.id)}
                             onClose={onClose}
-                            fetchStartup={fetchStartup}
+                            addFounder={addFounder}
                         />
                     )}
                 </ModalContent>
             </Modal>
-            <Modal
-                isOpen={editStartupModal.isOpen}
-                onClose={editStartupModal.onClose}
-            >
+            <Modal isOpen={editStartupModal.isOpen} onClose={editStartupModal.onClose}>
                 <ModalContent>
                     {(onClose) => (
                         <EditStartupModal
-                            startup={startupData}
+                            startup={startup}
                             onClose={onClose}
-                            fetchStartup={fetchStartup}
+                            updateStartup={updateStartup}
                         />
                     )}
                 </ModalContent>
             </Modal>
-        </main>
+        </>
     )
 }
 
@@ -187,12 +244,14 @@ function Founder({
     sessionIsFounder,
     startup_id,
     founder,
-    fetchStartup,
+    editFounder,
+    removeFounder
 }: {
     sessionIsFounder: boolean
     startup_id: number
     founder: api.Founder
-    fetchStartup: () => void
+    editFounder: typeof api.edit_founder
+    removeFounder: typeof api.remove_founder
 }) {
     const editFounderModal = useDisclosure()
     const deleteFounderModal = useDisclosure()
@@ -206,9 +265,7 @@ function Founder({
                     followerCount={founder.follower_count}
                 />
                 {founder.keynote && (
-                    <p className="text-pretty pt-2 my-auto">
-                        {founder.keynote}
-                    </p>
+                    <p className="text-pretty pt-2 my-auto">{founder.keynote}</p>
                 )}
             </CardBody>
             <Divider />
@@ -234,10 +291,7 @@ function Founder({
                             </Button>
                         </DropdownTrigger>
                         <DropdownMenu aria-label="Options">
-                            <DropdownItem
-                                key="edit"
-                                onClick={editFounderModal.onOpen}
-                            >
+                            <DropdownItem key="edit" onClick={editFounderModal.onOpen}>
                                 Edit
                             </DropdownItem>
                             <DropdownItem
@@ -252,17 +306,14 @@ function Founder({
                     </Dropdown>
                 )}
             </CardFooter>
-            <Modal
-                isOpen={editFounderModal.isOpen}
-                onClose={editFounderModal.onClose}
-            >
+            <Modal isOpen={editFounderModal.isOpen} onClose={editFounderModal.onClose}>
                 <ModalContent>
                     {(onClose) => (
                         <EditFounderModal
                             startup_id={startup_id}
                             founder={founder}
                             onClose={onClose}
-                            fetchStartup={fetchStartup}
+                            editFounder={editFounder}
                         />
                     )}
                 </ModalContent>
@@ -284,9 +335,11 @@ function Founder({
                         <Button
                             color="danger"
                             onClick={async () => {
-                                await api.remove_founder(startup_id, founder.id)
+                                await removeFounder({
+                                    startup_id: startup_id,
+                                    founder_id: founder.id
+                                })
                                 deleteFounderModal.onClose()
-                                fetchStartup()
                                 toast.success("Founder deleted")
                             }}
                         >
@@ -303,29 +356,28 @@ function EditFounderModal({
     startup_id,
     founder,
     onClose,
-    fetchStartup,
+    editFounder
 }: {
     startup_id: number
     founder: api.Founder
     onClose: () => void
-    fetchStartup: () => void
+    editFounder: typeof api.edit_founder
 }) {
     const keynote = useFormInput<HTMLTextAreaElement>({
         default: founder.keynote,
         allowEmpty: true,
-        error: api.BIO.getErrorMsg,
+        error: api.BIO.getErrorMsg
     })
     const foundedAt = useSignal(new Date(founder.founded_at * 1000))
     async function onSave() {
         if (!keynote.validate({focus: true})) return
-        await api.edit_founder(
-            startup_id,
-            founder.id,
-            keynote.value.value,
-            DateToInteger(foundedAt.value)
-        )
+        await editFounder({
+            startup_id: startup_id,
+            founder_id: founder.id,
+            keynote: keynote.value.value,
+            founded_at: DateToInteger(foundedAt.value)
+        })
         onClose()
-        fetchStartup()
         toast.success("Founder updated")
     }
     return (
@@ -347,11 +399,7 @@ function EditFounderModal({
                         foundedAt.value = ev.target.valueAsDate!
                     }}
                 />
-                <Textarea
-                    {...keynote.inputProps}
-                    variant="bordered"
-                    label="Keynote"
-                />
+                <Textarea {...keynote.inputProps} variant="bordered" label="Keynote" />
             </ModalBody>
             <ModalFooter>
                 <Button color="success" onClick={onSave}>
@@ -365,43 +413,43 @@ function EditFounderModal({
 function EditStartupModal({
     startup,
     onClose,
-    fetchStartup,
+    updateStartup
 }: {
     startup: api.Startup
     onClose: () => void
-    fetchStartup: () => void
+    updateStartup: typeof api.update_startup
 }) {
     const name = useFormInput({
         default: startup.name,
         error: api.NAME.getErrorMsg,
-        onEnter: () => description.ref.current?.focus(),
+        onEnter: () => description.ref.current?.focus()
     })
     const description = useFormInput<HTMLTextAreaElement>({
         default: startup.description,
         allowEmpty: true,
         error: api.BIO.getErrorMsg,
-        onEnter: () => banner.ref.current?.focus(),
+        onEnter: () => banner.ref.current?.focus()
     })
     const banner = useFormInput({
         default: startup.banner,
         allowEmpty: true,
         error: api.URL.getErrorMsg,
-        onEnter: onSave,
+        onEnter: onSave
     })
     const foundedAt = useSignal(new Date(startup.founded_at * 1000))
     async function onSave() {
         if (!name.validate({focus: true})) return
         if (!description.validate({focus: true})) return
         if (!banner.validate({focus: true})) return
-        await api.update_startup(
-            startup.id,
-            name.value.value,
-            description.value.value,
-            banner.value.value,
-            DateToInteger(foundedAt.value)
-        )
+        await updateStartup({
+            startup_id: startup.id,
+            name: name.value.value,
+            description: description.value.value,
+            banner: banner.value.value,
+            founded_at: DateToInteger(foundedAt.value)
+        })
         onClose()
-        fetchStartup()
+        toast.success("Startup updated")
     }
     return (
         <>
@@ -432,31 +480,39 @@ function AddFounderModal({
     startupId,
     onClose,
     founderIds,
-    fetchStartup,
+    addFounder
 }: {
     startupId: number
     founderIds: number[]
     onClose: () => void
-    fetchStartup: () => void
+    addFounder: typeof api.add_founder
 }) {
-    const [user, fetchUser] = useSignalMethod(
-        (): Promise<MethodResponse<api.UserHandle | null>> =>
-            api.find_user(username.value.peek())
+    const [user, fetchUser] = useQuery(
+        (): Promise<MethodResult<api.UserHandle | null>> =>
+            api.find_user({username: username.value.peek()})
     )
     const username = useFormInput({
         error: (value) => {
-            if (user.value?.ok === null && username.value.value.trim() !== "")
+            if (value.trim() === "") {
+                return
+            }
+            if (user.type === QueryType.ERROR) {
+                return "Network error"
+            }
+            if (user.value === null) {
                 return "User not found"
-            if (founderIds.includes(user.value?.ok?.id || -1))
+            }
+            if (founderIds.includes(user.value!.id)) {
                 return "User is already a founder"
+            }
             return api.USERNAME.getErrorMsg(value)
         },
         allowEmpty: false,
-        onDebounce: fetchUser,
+        onDebounce: fetchUser
     })
     const keynote = useFormInput<HTMLTextAreaElement>({
         allowEmpty: true,
-        error: api.BIO.getErrorMsg,
+        error: api.BIO.getErrorMsg
     })
     useSignalEffect(() => {
         if (user.value) {
@@ -467,35 +523,36 @@ function AddFounderModal({
     async function onAddFounder() {
         if (!username.validate({focus: true, noCallback: true})) return
         if (!keynote.validate({focus: true})) return
-        if (!user.value?.ok) return
-        await api.add_founder(
-            startupId,
-            user.value.ok.id,
-            keynote.value.value,
-            DateToInteger(foundedAt.value)
-        )
+        if (user.type !== QueryType.OK || user.value === null) return
+        await addFounder({
+            startup_id: startupId,
+            founder_id: user.value.id,
+            keynote: keynote.value.value,
+            founded_at: DateToInteger(foundedAt.value)
+        })
         onClose()
-        fetchStartup()
+        toast.success("Founder added")
     }
     return (
         <>
             <ModalHeader>Add founder</ModalHeader>
             <ModalBody>
-                {user.value?.ok && (
-                    <UserHandle
-                        username={username.value.value}
-                        avatar={user.value.ok.avatar}
-                        name={user.value.ok.name}
-                        followerCount={user.value.ok.follower_count}
-                    />
-                )}
+                {user.type === QueryType.LOADING ?
+                    <Spinner />
+                :   user.value && (
+                        <UserHandle
+                            username={user.value.username}
+                            avatar={user.value.avatar}
+                            name={user.value.name}
+                            followerCount={user.value.follower_count}
+                        />
+                    )
+                }
                 <Input
                     label="Username"
                     startContent={
                         <div className="pointer-events-none flex items-center">
-                            <span className="text-default-400 text-small">
-                                @
-                            </span>
+                            <span className="text-default-400 text-small">@</span>
                         </div>
                     }
                     {...username.inputProps}
@@ -509,11 +566,7 @@ function AddFounderModal({
                         foundedAt.value = ev.target.valueAsDate!
                     }}
                 />
-                <Textarea
-                    {...keynote.inputProps}
-                    variant="bordered"
-                    label="Keynote"
-                />
+                <Textarea {...keynote.inputProps} variant="bordered" label="Keynote" />
             </ModalBody>
             <ModalFooter>
                 <Button color="success" onClick={onAddFounder}>

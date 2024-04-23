@@ -28,9 +28,9 @@ export function Icon({
                 ["--material-symbols-grade" as any]: {
                     low: -25,
                     medium: 0,
-                    high: 200,
+                    high: 200
                 }[grade],
-                ["--material-symbols-optical-size" as any]: opticalSize,
+                ["--material-symbols-optical-size" as any]: opticalSize
             }}
             {...props}
         />

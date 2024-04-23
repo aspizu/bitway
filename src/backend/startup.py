@@ -6,10 +6,11 @@ import contextlib
 import sqlite3
 from typing import TYPE_CHECKING
 
-from . import service
+from reproca.method import method
+
 from .db import db
 from .misc import seconds_since_1970
-from .models import BIO, NAME, URL, Follower, Followers, Founder, Startup, UserSession
+from .models import BIO, NAME, URL, Follower, Followers, Founder, Session, Startup
 
 if TYPE_CHECKING:
     from sqlite3 import Cursor
@@ -24,9 +25,9 @@ def is_startup_founded_by(cur: Cursor, startup_id: int, founder_id: int) -> bool
     return cur.fetchone() is not None
 
 
-@service.method
+@method
 async def create_startup(
-    session: UserSession, name: str, description: str, banner: str, founded_at: int
+    session: Session, name: str, description: str, banner: str, founded_at: int
 ) -> int | None:
     """Create a startup."""
     if NAME.is_invalid(name) or BIO.is_invalid(description) or URL.is_invalid(banner):
@@ -52,8 +53,8 @@ async def create_startup(
     return startup_id
 
 
-@service.method
-async def delete_startup(session: UserSession, startup_id: int) -> None:
+@method
+async def delete_startup(session: Session, startup_id: int) -> None:
     """Only founders can delete startups."""
     con, cur = db()
     if not is_startup_founded_by(cur, startup_id, session.id):
@@ -62,9 +63,9 @@ async def delete_startup(session: UserSession, startup_id: int) -> None:
     con.commit()
 
 
-@service.method
+@method
 async def update_startup(
-    session: UserSession,
+    session: Session,
     startup_id: int,
     name: str,
     description: str,
@@ -88,8 +89,8 @@ async def update_startup(
     con.commit()
 
 
-@service.method
-async def get_startup(session: UserSession | None, startup_id: int) -> Startup | None:
+@method
+async def get_startup(session: Session | None, startup_id: int) -> Startup | None:
     """Get a startup."""
     _con, cur = db()
     cur.execute(
@@ -181,8 +182,8 @@ async def get_startup(session: UserSession | None, startup_id: int) -> Startup |
     )
 
 
-@service.method
-async def follow_startup(session: UserSession, startup_id: int) -> None:
+@method
+async def follow_startup(session: Session, startup_id: int) -> None:
     """Follow a startup."""
     con, cur = db()
     with contextlib.suppress(sqlite3.IntegrityError):
@@ -196,8 +197,8 @@ async def follow_startup(session: UserSession, startup_id: int) -> None:
     con.commit()
 
 
-@service.method
-async def unfollow_startup(session: UserSession, startup_id: int) -> None:
+@method
+async def unfollow_startup(session: Session, startup_id: int) -> None:
     """Unfollow a startup."""
     con, cur = db()
     cur.execute(

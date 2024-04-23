@@ -3,12 +3,13 @@ from __future__ import annotations
 import random
 from pathlib import Path
 import msgspec.json
-from reproca import SESSION_COOKIE_NAME
+
 import requests
 
 from .misc import seconds_since_1970
 
 HOST = "http://127.0.0.1:8000"
+SESSION_COOKIE_NAME = "sessionid"
 
 
 def get_user_id(username: str) -> int:

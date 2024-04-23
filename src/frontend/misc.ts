@@ -33,7 +33,7 @@ export function numberFormat(number: number, noun: string): string {
     return (
         new Intl.NumberFormat(undefined, {
             notation: "compact",
-            compactDisplay: "long",
+            compactDisplay: "long"
         }).format(number) +
         " " +
         noun +
