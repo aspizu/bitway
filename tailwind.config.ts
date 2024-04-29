@@ -16,14 +16,7 @@ export default {
     },
     plugins: [
         nextui({
-            addCommonColors: true,
-            layout: {
-                radius: {
-                    small: "4px",
-                    medium: "6px",
-                    large: "8px"
-                }
-            }
+            addCommonColors: true
         })
     ]
 } satisfies Config

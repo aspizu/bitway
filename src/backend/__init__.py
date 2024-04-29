@@ -56,7 +56,7 @@ with Path("src/frontend/api.ts").open("w") as file:
     code_generator.resolve()
 
 
-app = App(sessions)
+app = App(sessions, debug=DEBUG)
 
 
 def migrate() -> None:

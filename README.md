@@ -3,3 +3,178 @@
 This work is licensed under Attribution-NonCommercial-ShareAlike 4.0 International
 (CC BY-NC-SA 4.0) by Bitway. To view a copy of this license, visit
 <http://creativecommons.org/licenses/by-nc-sa/4.0/>.
+
+# Introduction
+
+bitway is a social media app for entrepreneurs and startup-enthusiasts. It is a
+platform for sharing ideas, networking, and collaborating on projects. Users can
+create posts, follow other users. Users can also create pages for their startups
+and add founders. Users can create polls to get feedback from the community.
+
+# Objectives
+
+- Demonstrate the use of relational database management systems (RDBMS) in
+  building web applications.
+- Demonstrate a full-stack web application development process.
+- Demonstrate the use of ER modeling in designing database schemas.
+- Demonstrate the use of SQL in querying and manipulating data in a database.
+
+# Purpose
+
+The purpose of this project is to build a social media app for entrepreneurs and
+startup-enthusiasts. This project is an excellent opportunity to apply the
+concepts learned in the course, such as database design and SQL, in a real-world
+application.
+
+# Scope
+
+The scope of this project includes the following features:
+
+- User authentication
+- User profiles
+- Posts
+- Polls
+- Startup pages
+- Follow system
+
+# Problem Definition
+
+Entrepreneurs and startup-enthusiasts need a platform to share ideas, network,
+and collaborate on projects. Existing social media platforms do not cater to
+this specific audience. bitway aims to fill this gap by providing a platform
+dedicated to entrepreneurs and startup-enthusiasts.
+
+# Requirements Specification
+
+The following are the requirements for the bitway social media app:
+
+1. User Authentication
+   - Users should be able to create an account.
+   - Users should be able to log in to their account.
+   - Users should be able to reset their password.
+
+2. User Profiles
+    - Users should be able to create a profile.
+    - Users should be able to update their profile.
+    - Users should be able to view other users' profiles.
+
+3. Posts
+    - Users should be able to create posts.
+    - Users should be able to view posts.
+
+4. Polls
+    - Users should be able to create polls.
+    - Users should be able to vote on polls.
+
+5. Startup Pages
+    - Users should be able to create startup pages.
+    - Users should be able to add founders to startup pages.
+    - Founders should be able to update startup pages.
+    - Founders should be able to write a keynote for their startup.
+
+6. Follow System
+    - Users should be able to follow other users.
+
+# Software and Hardware Requirements
+
+## Front-end
+
+- **TypeScript**: Programming language
+- **Bun**: JavaScript package manager and toolchain
+- **Vite**: JavaScript build system
+- **React**: JavaScript library for building user interfaces
+- **Tailwind CSS**: CSS framework
+- **React Router**: Routing library for React
+- **Next UI**: React component library
+- **react-hot-toast**: React toast notifications
+- **Preact Signals**: React state management library
+- **Deep Signals**: React state management library
+- **date-fns**: Date and time formatting library
+- **Material Symbols**: Icon library
+- **reproca**: Client-side library for connecting to the back-end's API
+
+## Back-end
+
+Python 3.12: Programming language
+Rye: Python project manager and toolchain
+Uvicorn: ASGI server
+reproca: RPC API framework
+SQLite: Relational database management system
+Argon2: Secure password hashing algorithm
+
+# System Design
+
+## Back-end
+
+The back-end is written in Python using the reproca framework.
+
+reproca is a remote procedure call (RPC) API framework created by me for building
+APIs which communicate using JSON over HTTP. It uses code-generation to generate
+client-side bindings in TypeScript for type-safety and good developer experience.
+
+reproca uses the ASGI protocol for handling HTTP requests. We are using uvicorn
+which is an ASGI server implementation to run the back-end.
+
+## Database
+
+The database is a SQLite database. SQLite is a lightweight relational database
+management system that is easy to set up and use. SQLite is included in the Python
+standard library, so we don't need to install any additional software to use it.
+
+## Authentication
+
+reproca provides an in-memory session store for storing data about logged-in users.
+We use the Argon2 algorithm to securely hash passwords before storing them in the
+database.
+
+## Front-end
+
+The front-end is built using React which is a JavaScript library for building user
+interfaces.
+
+It is written in TypeScript which is a statically typed superset of JavaScript that
+provides type-checking and other features to help catch errors early in the
+development process.
+
+Next UI is a React component library that provides a set of reusable components for
+building user interfaces.
+
+Communication with the back-end is done through the bindings generated by reproca.
+reproca provides a state management library which uses Deep Signals for keeping
+the state of the application in sync with the back-end.
+
+Form validation is done through reproca's form validation features.
+
+reproca allows us to define the constraints for each field in a form in Python and
+then generate TypeScript code for the front-end to validate the form.
+
+## Testing
+
+The back-end was tested thoroughly using curl and Postman. The front-end was tested
+manually by interacting with the app in the browser.
+
+# Conclusion
+
+bitway is a social media app for entrepreneurs and startup-enthusiasts. It provides
+a platform for sharing ideas, networking, and collaborating on projects. The app
+demonstrates the use of relational database management systems (RDBMS) in building
+web applications. It also demonstrates a full-stack web application development
+process, including the use of ER modeling in designing database schemas and the use
+of SQL in querying and manipulating data in a database.
+
+# Limitations of the System
+
+The system has the following limitations:
+
+- The system does not support real-time updates. Users need to refresh the page to
+  see new posts or notifications.
+- The system does not support file uploads. Users cannot upload images or other
+  files to the app.
+- The system does not support notifications. Users do not receive notifications
+  when someone follows them or likes their post.
+
+# Future Scope of the Project
+
+Integrating with third-party services and APIs could add value to the platform by offering additional functionalities and services. Examples include integration with payment gateways for crowdfunding campaigns, integration with project management tools for collaborative project management, and integration with social media platforms for cross-platform sharing and promotion.
+
+By continuously iterating and improving upon the existing features while incorporating new functionalities based on user feedback and market trends, bitway can evolve into a thriving ecosystem for entrepreneurs, startup enthusiasts, and innovators to connect, collaborate, and succeed together.

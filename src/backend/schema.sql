@@ -83,16 +83,4 @@ create table if not exists Founder (
     unique (Startup, Founder)
 ) strict;
 
-create table if not exists Investor (
-    ID integer primary key not null,
-    Keynote text not null,
-    Startup integer not null,
-    Investor integer not null,
-    InvestedAt integer not null,
-    CreatedAt integer not null,
-    foreign key (Startup) references Startup(ID) on delete cascade,
-    foreign key (Investor) references User(ID) on delete cascade,
-    unique (Startup, Investor)
-) strict;
-
 end transaction;

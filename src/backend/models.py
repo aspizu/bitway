@@ -25,10 +25,10 @@ NAME = export_string_type(
     "NAME",
     StringType()
     .not_empty("Name cannot be empty.")
-    .max(64, "Name cannot be longer than $ characters."),
+    .max(256, "Name cannot be longer than $ characters."),
 )
 BIO = export_string_type(
-    "BIO", StringType().empty().max(256, "Bio cannot be longer than $ characters.")
+    "BIO", StringType().empty().max(1024, "Bio cannot be longer than $ characters.")
 )
 URL = export_string_type(
     "URL",
